@@ -26,7 +26,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: cd server && npm install mongodb
+        run: npm install mongodb
 
       - name: Run data collector
         env:
@@ -36,4 +36,4 @@ jobs:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           MONGODB_DB: ${{ secrets.MONGODB_DB }}
           MONGODB_COL: ${{ secrets.MONGODB_COL }}
-        run: cd server && node scripts/collect-data.js
+        run: node scripts/collect-data.js
