@@ -2,7 +2,10 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
 <title>51.LA 流量趋势分析 · AI 报告</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
@@ -429,14 +432,274 @@
     margin-top: 30px;
   }
 
-  /* Responsive */
+  /* Responsive - Tablet & Mobile */
+
+  /* 平板适配：769px ~ 1024px */
+  @media (max-width: 1024px) {
+    .container { padding: 20px; }
+    .header { padding: 12px 20px; }
+    .chart-row { grid-template-columns: 1fr; }
+  }
+
+  /* 大屏手机 / 小平板：481px ~ 768px */
   @media (max-width: 768px) {
+    body {
+      /* 安全区域适配全面屏 */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
     .container { padding: 14px; }
-    .header { padding: 10px 14px; }
+
+    /* Header */
+    .header {
+      padding: 10px 14px;
+      padding-top: calc(10px + env(safe-area-inset-top));
+    }
+    .logo { width: 36px; height: 36px; font-size: 18px; border-radius: 9px; }
+    .header-left { gap: 10px; }
     .header-title { font-size: 15px; }
     .header-subtitle { display: none; }
-    .stat-value { font-size: 22px; }
-    .chart-container { height: 250px; }
+    .header-right { gap: 8px; }
+    .icon-btn { width: 36px; height: 36px; font-size: 16px; }
+
+    /* Report Info Bar */
+    .report-info-bar {
+      padding: 10px 12px;
+      font-size: 12px;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .report-info-spacer { display: none; }
+    .report-info-text:last-child { width: 100%; border-top: 1px solid var(--border-color); padding-top: 8px; }
+
+    /* Site Selector */
+    .site-selector { margin-bottom: 16px; }
+    .site-tabs {
+      gap: 4px;
+      padding: 3px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      max-width: 100%;
+    }
+    .site-tabs::-webkit-scrollbar { display: none; }
+    .site-tab {
+      padding: 7px 12px;
+      font-size: 13px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-card { padding: 14px; border-radius: 10px; }
+    .stat-card:hover { transform: none; }
+    .stat-icon {
+      width: 32px; height: 32px;
+      font-size: 16px;
+      margin-bottom: 8px;
+      border-radius: 7px;
+    }
+    .stat-label { font-size: 11px; margin-bottom: 4px; }
+    .stat-value { font-size: 20px; margin-bottom: 2px; }
+    .stat-change { font-size: 11px; }
+
+    /* Chart Section */
+    .chart-section { padding: 14px; margin-bottom: 16px; border-radius: 10px; }
+    .section-header { margin-bottom: 12px; }
+    .section-title { font-size: 15px; }
+    .metric-toggle { gap: 4px; }
+    .metric-btn { padding: 5px 10px; font-size: 11px; }
+    .chart-container { height: 220px; }
+
+    /* Quality Indicators */
+    .quality-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .quality-item { padding: 12px 8px; border-radius: 8px; }
+    .quality-label { font-size: 11px; margin-bottom: 2px; }
+    .quality-value { font-size: 17px; margin-bottom: 2px; }
+    .quality-level { padding: 1px 8px; font-size: 10px; }
+
+    /* AI Analysis */
+    .ai-section { padding: 16px; margin-bottom: 16px; border-radius: 10px; }
+    .ai-header { margin-bottom: 14px; gap: 8px; }
+    .ai-badge { font-size: 11px; padding: 3px 10px; }
+    .ai-summary { padding: 14px; font-size: 13px; line-height: 1.7; margin-bottom: 14px; }
+    .ai-findings {
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .finding-card { padding: 12px; gap: 8px; border-radius: 8px; }
+    .finding-icon { font-size: 20px; }
+    .finding-text { font-size: 12px; line-height: 1.5; }
+
+    .ai-tabs {
+      gap: 0;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .ai-tabs::-webkit-scrollbar { display: none; }
+    .ai-tab {
+      padding: 10px 14px;
+      font-size: 13px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .rec-item { padding: 12px; gap: 10px; margin-bottom: 8px; border-radius: 8px; }
+    .rec-title { font-size: 13px; margin-bottom: 3px; }
+    .rec-detail { font-size: 12px; line-height: 1.5; }
+    .rec-icon { font-size: 18px; }
+    .rec-priority { font-size: 10px; padding: 1px 6px; margin-left: 6px; }
+
+    .ai-outlook { padding: 12px 14px; gap: 10px; border-radius: 8px; }
+    .outlook-label { font-size: 13px; }
+
+    /* Deep Analysis */
+    .deep-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .deep-card { padding: 14px; border-radius: 8px; }
+    .deep-card-title { font-size: 12px; margin-bottom: 6px; }
+    .deep-card-content { font-size: 12px; line-height: 1.6; }
+    .action-list li { padding: 8px 0; font-size: 12px; gap: 8px; }
+    .action-phase { font-size: 10px; padding: 1px 6px; }
+    .risk-list li { padding: 6px 0; font-size: 12px; gap: 6px; }
+
+    /* Strategy Section */
+    .strategy-card { padding: 16px; margin-bottom: 12px; border-radius: 10px; }
+    .strategy-header { gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .strategy-target { font-size: 16px; }
+    .strategy-type { font-size: 11px; padding: 3px 10px; }
+    .strategy-focus { font-size: 13px; margin-bottom: 12px; }
+    .strategy-actions li { padding: 6px 0; font-size: 12px; gap: 6px; }
+
+    /* Comparison Table */
+    .comparison-table { font-size: 12px; }
+    .comparison-table th, .comparison-table td {
+      padding: 10px 12px;
+      white-space: nowrap;
+    }
+    .comparison-table th { font-size: 11px; }
+    .grade-badge { font-size: 11px; padding: 3px 10px; }
+
+    /* Loading */
+    .loading { padding: 30px; font-size: 14px; }
+    .spinner { width: 32px; height: 32px; border-width: 2px; margin-right: 10px; }
+
+    /* Footer */
+    .footer { padding: 20px 14px; font-size: 12px; margin-top: 20px; }
+  }
+
+  /* 小屏手机：<= 480px */
+  @media (max-width: 480px) {
+    .container { padding: 12px; }
+
+    /* Header */
+    .header { padding: 8px 12px; }
+    .logo { width: 32px; height: 32px; font-size: 16px; border-radius: 8px; }
+    .header-title { font-size: 14px; }
+    .icon-btn { width: 34px; height: 34px; font-size: 15px; border-radius: 7px; }
+
+    /* Report Info Bar */
+    .report-info-bar {
+      padding: 8px 10px;
+      font-size: 11px;
+      gap: 8px;
+    }
+
+    /* Site Selector */
+    .site-tab { padding: 6px 10px; font-size: 12px; }
+
+    /* Stats Cards */
+    .stats-grid { gap: 8px; }
+    .stat-card { padding: 12px; border-radius: 9px; }
+    .stat-icon { width: 28px; height: 28px; font-size: 14px; margin-bottom: 6px; }
+    .stat-label { font-size: 10px; }
+    .stat-value { font-size: 18px; }
+    .stat-change { font-size: 10px; }
+
+    /* Chart Section */
+    .chart-section { padding: 12px; border-radius: 9px; }
+    .section-title { font-size: 14px; }
+    .section-header { margin-bottom: 10px; }
+    .metric-btn { padding: 4px 8px; font-size: 10px; }
+    .chart-container { height: 200px; }
+
+    /* Quality Indicators */
+    .quality-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .quality-item { padding: 10px 6px; border-radius: 7px; }
+    .quality-label { font-size: 10px; }
+    .quality-value { font-size: 15px; }
+    .quality-level { padding: 1px 6px; font-size: 9px; }
+
+    /* AI Analysis */
+    .ai-section { padding: 14px; border-radius: 9px; }
+    .ai-summary { padding: 12px; font-size: 12px; line-height: 1.6; }
+    .finding-card { padding: 10px; gap: 8px; }
+    .finding-icon { font-size: 18px; }
+    .finding-text { font-size: 11px; }
+
+    .ai-tab { padding: 8px 12px; font-size: 12px; }
+
+    .rec-item { padding: 10px; gap: 8px; }
+    .rec-title { font-size: 12px; }
+    .rec-detail { font-size: 11px; }
+
+    .deep-card { padding: 12px; }
+    .deep-card-content { font-size: 11px; line-height: 1.5; }
+
+    /* Strategy */
+    .strategy-card { padding: 14px; }
+    .strategy-target { font-size: 15px; }
+    .strategy-focus { font-size: 12px; }
+
+    /* Comparison Table */
+    .comparison-table { font-size: 11px; }
+    .comparison-table th, .comparison-table td { padding: 8px 10px; }
+
+    /* Loading */
+    .loading { padding: 24px; font-size: 13px; }
+    .spinner { width: 28px; height: 28px; }
+
+    /* Footer */
+    .footer { padding: 16px 12px; font-size: 11px; }
+  }
+
+  /* 横屏手机优化 */
+  @media (max-width: 900px) and (orientation: landscape) {
+    .chart-container { height: 180px; }
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  /* 触摸设备优化：移除 hover 效果，使用 active 反馈 */
+  @media (hover: none) and (pointer: coarse) {
+    .stat-card:hover { transform: none; box-shadow: none; }
+    .stat-card:active { transform: scale(0.98); transition: transform 0.1s; }
+    .btn:active, .icon-btn:active, .site-tab:active, .metric-btn:active, .ai-tab:active {
+      opacity: 0.7;
+    }
+    .site-tab:hover { color: var(--text-secondary); }
+    .site-tab.active:hover { color: white; }
+    .icon-btn:hover { background: var(--bg-tertiary); color: var(--text-secondary); }
+    .metric-btn:hover { color: var(--text-secondary); }
+    .metric-btn.active:hover { color: white; }
+    .comparison-table tr:hover { background: transparent; }
+    .comparison-table tr:active { background: var(--bg-tertiary); }
+    /* 移除点击高亮 */
+    * { -webkit-tap-highlight-color: transparent; }
   }
 </style>
 </head>
