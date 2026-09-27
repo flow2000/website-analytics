@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>51.LA 流量趋势分析 · AI 报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-blue: #3b82f6;
+    --accent-green: #22c55e;
+    --accent-yellow: #eab308;
+    --accent-red: #ef4444;
+    --accent-purple: #a855f7;
+    --accent-cyan: #06b6d4;
+    --border-color: #334155;
+    --card-bg: #1e293b;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  }
+
+  [data-theme="light"] {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-color: #e2e8f0;
+    --card-bg: #ffffff;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* Header */
+  .header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+
+  .header-left { display: flex; align-items: center; gap: 12px; }
+
+  .logo {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  .header-title {
+    font-size: 19px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-subtitle { font-size: 12px; color: var(--text-muted); }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .btn {
+    padding: 8px 16px;
+    border: none; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-secondary {
+    background: var(--bg-tertiary); color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+  .btn-secondary:hover { background: var(--border-color); }
+
+  .icon-btn {
+    width: 36px; height: 36px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+  }
+  .icon-btn:hover { background: var(--border-color); color: var(--text-primary); }
+
+  /* Container */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Report Info Bar */
+  .report-info-bar {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 16px; padding: 10px 16px;
+    background: var(--card-bg); border: 1px solid var(--border-color);
+    border-radius: 10px; font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .report-info-indicator {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+  }
+  .report-info-text { color: var(--text-secondary); }
+  .report-info-text strong { color: var(--text-primary); }
+  .report-info-spacer { flex: 1; }
+
+  /* Site Selector */
+  .site-selector {
+    display: flex; gap: 12px; margin-bottom: 20px;
+    flex-wrap: wrap; align-items: center;
+  }
+  .site-tabs {
+    display: flex; gap: 6px;
+    background: var(--bg-secondary);
+    padding: 4px; border-radius: 10px;
+    border: 1px solid var(--border-color);
+  }
+  .site-tab {
+    padding: 8px 16px; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: 500;
+    color: var(--text-secondary); transition: all 0.2s;
+    border: none; background: transparent;
+  }
+  .site-tab:hover { color: var(--text-primary); }
+  .site-tab.active { background: var(--accent-blue); color: white; }
+
+  /* Stats Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 18px;
+    transition: all 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .stat-label {
+    font-size: 12px; color: var(--text-secondary);
+    margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .stat-value { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  .stat-change { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .stat-change.up { color: var(--accent-green); }
+  .stat-change.down { color: var(--accent-red); }
+  .stat-change.flat { color: var(--text-muted); }
+  .stat-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin-bottom: 10px;
+  }
+  .icon-uv { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+  .icon-pv { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+  .icon-ip { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+  .icon-duration { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+  .icon-bounce { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+  .icon-newuser { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+
+  /* Chart Section */
+  .chart-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+  .section-title {
+    font-size: 17px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .metric-toggle { display: flex; gap: 6px; }
+  .metric-btn {
+    padding: 5px 10px; font-size: 12px;
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    border: 1px solid var(--border-color); border-radius: 6px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .metric-btn:hover { color: var(--text-primary); }
+  .metric-btn.active {
+    background: var(--accent-blue); color: white; border-color: var(--accent-blue);
+  }
+  .chart-container { position: relative; height: 300px; }
+  .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+  @media (max-width: 900px) {
+    .chart-row { grid-template-columns: 1fr; }
+  }
+
+  /* Quality Indicators */
+  .quality-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .quality-item {
+    text-align: center; padding: 14px;
+    background: var(--bg-tertiary); border-radius: 10px;
+  }
+  .quality-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .quality-value { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .quality-level {
+    display: inline-block; padding: 2px 10px;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .level-excellent { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+  .level-good { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+  .level-normal { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+  .level-poor { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+
+  /* AI Analysis Section */
+  .ai-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 24px; margin-bottom: 20px;
+  }
+  .ai-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .ai-badge {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    color: white; padding: 4px 12px;
+    border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+  .ai-summary {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(168, 85, 247, 0.1));
+    border: 1px solid var(--border-color);
+    border-radius: 10px; padding: 18px;
+    margin-bottom: 18px; font-size: 14px; line-height: 1.8;
+  }
+  .ai-findings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 10px; margin-bottom: 18px;
+  }
+  .finding-card {
+    background: var(--bg-tertiary); border-radius: 10px;
+    padding: 14px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .finding-icon { font-size: 22px; flex-shrink: 0; }
+  .finding-text { font-size: 13px; line-height: 1.6; }
+
+  .ai-tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+  }
+  .ai-tab {
+    padding: 10px 18px; cursor: pointer;
+    font-size: 14px; font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .ai-tab:hover { color: var(--text-primary); }
+  .ai-tab.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+  }
+
+  .ai-panel { display: none; }
+  .ai-panel.active { display: block; }
+
+  .rec-item {
+    display: flex; gap: 12px;
+    padding: 14px;
+    background: var(--bg-tertiary); border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--accent-blue);
+  }
+  .rec-item.type-success { border-left-color: var(--accent-green); }
+  .rec-item.type-warning { border-left-color: var(--accent-yellow); }
+  .rec-item.type-alert { border-left-color: var(--accent-red); }
+  .rec-item.type-info { border-left-color: var(--accent-blue); }
+  .rec-title { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+  .rec-detail { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+  .rec-icon { font-size: 20px; flex-shrink: 0; }
+  .rec-priority {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 600;
+    margin-left: 8px;
+    background: rgba(59, 130, 246, 0.2); color: var(--accent-blue);
+  }
+  .rec-priority.high { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+  .rec-priority.medium { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
+  .rec-priority.low { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+
+  .ai-outlook {
+    background: var(--bg-tertiary); border-radius: 10px;
+    padding: 14px 18px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .outlook-label { font-weight: 600; color: var(--accent-cyan); white-space: nowrap; }
+
+  /* Deep Analysis */
+  .deep-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px; margin-bottom: 18px;
+  }
+  .deep-card {
+    background: var(--bg-tertiary); border-radius: 10px; padding: 16px;
+  }
+  .deep-card-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--accent-blue); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .deep-card-content { font-size: 13px; line-height: 1.7; color: var(--text-secondary); }
+
+  .action-list { list-style: none; }
+  .action-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+    display: flex; gap: 10px;
+  }
+  .action-list li:last-child { border-bottom: none; }
+  .action-phase {
+    flex-shrink: 0; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+    background: rgba(59, 130, 246, 0.2); color: var(--accent-blue);
+    height: fit-content;
+  }
+
+  .risk-list { list-style: none; }
+  .risk-list li {
+    padding: 8px 0; font-size: 13px;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .risk-icon { color: var(--accent-red); flex-shrink: 0; }
+
+  /* Strategy Section */
+  .strategy-card {
+    background: var(--bg-tertiary); border-radius: 12px;
+    padding: 20px; margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+  }
+  .strategy-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .strategy-target {
+    font-size: 18px; font-weight: 700;
+  }
+  .strategy-type {
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    color: white;
+  }
+  .strategy-focus {
+    font-size: 14px; color: var(--text-secondary);
+    margin-bottom: 14px;
+  }
+  .strategy-actions { list-style: none; }
+  .strategy-actions li {
+    padding: 8px 0; font-size: 13px;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .strategy-actions li::before {
+    content: '✓'; color: var(--accent-green); font-weight: 700;
+  }
+
+  /* Comparison Table */
+  .comparison-table {
+    width: 100%; border-collapse: collapse; font-size: 14px;
+  }
+  .comparison-table th, .comparison-table td {
+    padding: 12px 16px; text-align: left;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .comparison-table th {
+    font-weight: 600; color: var(--text-secondary);
+    font-size: 13px; background: var(--bg-tertiary);
+  }
+  .comparison-table tr:hover { background: var(--bg-tertiary); }
+  .grade-badge {
+    display: inline-block; padding: 4px 12px;
+    border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+
+  /* Loading */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 50px; color: var(--text-secondary);
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  .footer {
+    text-align: center; padding: 24px;
+    color: var(--text-muted); font-size: 13px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 30px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 14px; }
+    .header { padding: 10px 14px; }
+    .header-title { font-size: 15px; }
+    .header-subtitle { display: none; }
+    .stat-value { font-size: 22px; }
+    .chart-container { height: 250px; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">📊</div>
+    <div>
+      <div class="header-title">51.LA 流量趋势分析 · AI 报告</div>
+      <div class="header-subtitle">AI 生成 · 静态部署</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="icon-btn" id="refreshBtn" title="刷新数据">🔄</button>
+    <button class="icon-btn" id="themeBtn" title="切换主题">🌙</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Report Info Bar -->
+  <div class="report-info-bar">
+    <div class="report-info-indicator"></div>
+    <div class="report-info-text" id="reportInfoText">加载中...</div>
+    <div class="report-info-spacer"></div>
+    <div class="report-info-text" id="reportGenTime"></div>
+  </div>
+
+  <!-- Site Selector -->
+  <div class="site-selector">
+    <div class="site-tabs" id="siteTabs">
+      <button class="site-tab active" data-site="overview">📊 总览</button>
+    </div>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="loading" style="grid-column: 1/-1;"><div class="spinner"></div> 加载数据中...</div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="chart-row">
+    <div class="chart-section">
+      <div class="section-header">
+        <div class="section-title">📈 流量趋势</div>
+        <div class="metric-toggle">
+          <button class="metric-btn" data-metric="uv">UV</button>
+          <button class="metric-btn" data-metric="pv">PV</button>
+          <button class="metric-btn active" data-metric="both">UV+PV</button>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-header">
+        <div class="section-title">🎯 流量质量</div>
+      </div>
+      <div class="quality-grid" id="qualityGrid">
+        <div class="loading" style="grid-column: 1/-1;"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Analysis -->
+  <div class="ai-section">
+    <div class="ai-header">
+      <div class="section-title">🤖 AI 智能分析</div>
+      <span class="ai-badge">AI-Powered</span>
+    </div>
+    <div id="aiContent">
+      <div class="loading"><div class="spinner"></div> AI 分析加载中...</div>
+    </div>
+  </div>
+
+  <!-- Multi-site Comparison -->
+  <div class="chart-section" id="comparisonSection" style="display: none;">
+    <div class="section-header">
+      <div class="section-title">🏆 多站点对比</div>
+    </div>
+    <div style="overflow-x: auto;">
+      <table class="comparison-table" id="comparisonTable">
+        <thead>
+          <tr>
+            <th>站点</th>
+            <th>今日 UV</th>
+            <th>今日 PV</th>
+            <th>UV 变化</th>
+            <th>PV 变化</th>
+            <th>跳出率</th>
+            <th>人均页数</th>
+            <th>质量评级</th>
+          </tr>
+        </thead>
+        <tbody id="comparisonBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>51.LA Analytics · AI 报告系统 | 数据由外部 AI 生成 · 静态部署</p>
+  </div>
+</div>
+
+<script>
+// ========== 全局状态 ==========
+const STATE = {
+  reportData: null,
+  currentSite: 'overview',
+  currentMetric: 'both',
+  trendChart: null
+};
+
+// ========== 工具函数 ==========
+const $ = id => document.getElementById(id);
+const fmt = n => n === null || n === undefined || n === '' ? '--' : Number(n).toLocaleString('zh-CN');
+
+function formatChange(pct) {
+  if (pct === null || pct === undefined) return { text: '--', class: 'flat' };
+  if (pct > 0) return { text: `↑ ${pct.toFixed(2)}%`, class: 'up' };
+  if (pct < 0) return { text: `↓ ${Math.abs(pct).toFixed(2)}%`, class: 'down' };
+  return { text: '→ 0%', class: 'flat' };
+}
+
+function getLevelClass(level) {
+  switch (level) {
+    case '优秀': return 'level-excellent';
+    case '良好': return 'level-good';
+    case '一般': return 'level-normal';
+    case '偏高': case '偏短': case '待优化': return 'level-poor';
+    default: return 'level-normal';
+  }
+}
+
+function getTypeIcon(type) {
+  switch (type) {
+    case 'success': return '✅';
+    case 'warning': return '⚠️';
+    case 'alert': return '🚨';
+    default: return '💡';
+  }
+}
+
+function priorityLabel(p) {
+  return { high: '高优先级', medium: '中优先级', low: '低优先级' }[p] || p;
+}
+
+// ========== 数据加载 ==========
+async function loadReportData() {
+  const res = await fetch('data/report.json?_=' + Date.now());
+  if (!res.ok) throw new Error('无法加载 data/report.json (HTTP ' + res.status + ')');
+  return await res.json();
+}
+
+// ========== 报告信息栏 ==========
+function updateReportInfo() {
+  const data = STATE.reportData;
+  const infoEl = $('reportInfoText');
+  const timeEl = $('reportGenTime');
+
+  const siteCount = data.sites?.length || 0;
+  const dataSource = data.dataSource || data.generator || 'AI 生成';
+
+  infoEl.innerHTML = `📄 <strong>AI 分析报告</strong> · ${siteCount} 个站点 · 数据来源：${dataSource}`;
+
+  if (data.generatedAt) {
+    timeEl.innerHTML = `🕐 生成时间：<strong>${new Date(data.generatedAt).toLocaleString('zh-CN')}</strong>`;
+  }
+}
+
+// ========== 站点标签 ==========
+function initSiteTabs() {
+  const tabs = $('siteTabs');
+  const data = STATE.reportData;
+
+  if (!data || !data.sites) return;
+
+  tabs.innerHTML = '<button class="site-tab active" data-site="overview">📊 总览</button>';
+
+  for (const site of data.sites) {
+    const btn = document.createElement('button');
+    btn.className = 'site-tab';
+    btn.dataset.site = site.name;
+    btn.innerHTML = `${site.name} <span style="font-size: 11px; opacity: 0.7; margin-left: 4px;">${site.overallGrade || ''}</span>`;
+    tabs.appendChild(btn);
+  }
+
+  tabs.querySelectorAll('.site-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.querySelectorAll('.site-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      STATE.currentSite = tab.dataset.site;
+      renderAll();
+    });
+  });
+}
+
+// ========== 渲染：统计卡片 ==========
+function renderStats() {
+  const grid = $('statsGrid');
+  const data = STATE.reportData;
+
+  if (STATE.currentSite === 'overview') {
+    const summary = data.summary || {};
+    const sites = data.sites || [];
+    const validSites = sites.filter(s => s.today);
+
+    let totalUv = 0, totalPv = 0, totalSv = 0, totalIp = 0, totalNew = 0;
+    let avgBounce = 0, avgDuration = 0;
+
+    for (const s of validSites) {
+      totalUv += s.today.uv || 0;
+      totalPv += s.today.pv || 0;
+      totalSv += s.today.sv || 0;
+      totalIp += s.today.ip || 0;
+      totalNew += s.today.newUser || 0;
+      avgBounce += s.today.bounceRate || 0;
+      avgDuration += s.today.avgDuration || 0;
+    }
+    if (validSites.length > 0) {
+      avgBounce /= validSites.length;
+      avgDuration /= validSites.length;
+    }
+
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon icon-uv">👥</div>
+        <div class="stat-label">总访客 UV</div>
+        <div class="stat-value">${fmt(totalUv)}</div>
+        <div class="stat-change flat">${summary.totalSites || validSites.length} 个站点</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-pv">👁️</div>
+        <div class="stat-label">总浏览 PV</div>
+        <div class="stat-value">${fmt(totalPv)}</div>
+        <div class="stat-change flat">累计页面浏览</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-ip">🌐</div>
+        <div class="stat-label">总 IP 数</div>
+        <div class="stat-value">${fmt(totalIp)}</div>
+        <div class="stat-change flat">独立 IP 地址</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-newuser">🆕</div>
+        <div class="stat-label">新访客</div>
+        <div class="stat-value">${fmt(totalNew)}</div>
+        <div class="stat-change flat">新增用户数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-bounce">🚪</div>
+        <div class="stat-label">平均跳出率</div>
+        <div class="stat-value">${avgBounce ? avgBounce.toFixed(1) + '%' : '--'}</div>
+        <div class="stat-change flat">多站平均</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-duration">⏱️</div>
+        <div class="stat-label">平均访问时长</div>
+        <div class="stat-value">${avgDuration ? avgDuration.toFixed(0) + 's' : '--'}</div>
+        <div class="stat-change flat">多站平均</div>
+      </div>
+    `;
+  } else {
+    const site = data.sites.find(s => s.name === STATE.currentSite);
+    if (!site || !site.today) {
+      grid.innerHTML = '<div class="loading" style="grid-column: 1/-1;">暂无数据</div>';
+      return;
+    }
+    const t = site.today;
+    const c = site.compare || {};
+
+    const uvChg = formatChange(c.uvChange);
+    const pvChg = formatChange(c.pvChange);
+    const ipChg = formatChange(c.ipChange);
+    const newChg = formatChange(c.newUserChange);
+
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-icon icon-uv">👥</div>
+        <div class="stat-label">访客数 UV</div>
+        <div class="stat-value">${fmt(t.uv)}</div>
+        <div class="stat-change ${uvChg.class}">${uvChg.text} 较昨日</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-pv">👁️</div>
+        <div class="stat-label">浏览量 PV</div>
+        <div class="stat-value">${fmt(t.pv)}</div>
+        <div class="stat-change ${pvChg.class}">${pvChg.text} 较昨日</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-ip">🌐</div>
+        <div class="stat-label">IP 数</div>
+        <div class="stat-value">${fmt(t.ip)}</div>
+        <div class="stat-change ${ipChg.class}">${ipChg.text} 较昨日</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-newuser">🆕</div>
+        <div class="stat-label">新访客</div>
+        <div class="stat-value">${fmt(t.newUser)}</div>
+        <div class="stat-change ${newChg.class}">${newChg.text} 较昨日</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-bounce">🚪</div>
+        <div class="stat-label">跳出率</div>
+        <div class="stat-value">${t.bounceRate ? t.bounceRate.toFixed(1) + '%' : '--'}</div>
+        <div class="stat-change flat">单页跳出比例</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon icon-duration">⏱️</div>
+        <div class="stat-label">平均访问时长</div>
+        <div class="stat-value">${t.avgDuration ? t.avgDuration.toFixed(0) + 's' : '--'}</div>
+        <div class="stat-change flat">人均停留</div>
+      </div>
+    `;
+  }
+}
+
+// ========== 渲染：趋势图 ==========
+function renderChart() {
+  const ctx = $('trendChart').getContext('2d');
+  const data = STATE.reportData;
+  let labels = [], datasets = [];
+
+  const colors = {
+    uv: { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+    pv: { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)' },
+    purple: { border: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)' },
+    orange: { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }
+  };
+
+  if (STATE.currentSite === 'overview') {
+    const sites = data.sites || [];
+    labels = sites.map(s => s.name);
+    const uvVals = sites.map(s => s.today?.uv || 0);
+    const pvVals = sites.map(s => s.today?.pv || 0);
+
+    datasets = [
+      {
+        label: 'UV', data: uvVals,
+        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+        borderColor: '#3b82f6', borderWidth: 2, borderRadius: 6,
+        yAxisID: 'y'
+      },
+      {
+        label: 'PV', data: pvVals,
+        backgroundColor: 'rgba(34, 197, 94, 0.7)',
+        borderColor: '#22c55e', borderWidth: 2, borderRadius: 6,
+        yAxisID: 'y1'
+      }
+    ];
+  } else {
+    const site = data.sites.find(s => s.name === STATE.currentSite);
+    const history = site?.history || [];
+    labels = history.map(h => h.date.slice(5));
+    const uvData = history.map(h => h.uv || 0);
+    const pvData = history.map(h => h.pv || 0);
+
+    const showBoth = STATE.currentMetric === 'both';
+    const showUv = STATE.currentMetric === 'uv' || showBoth;
+    const showPv = STATE.currentMetric === 'pv' || showBoth;
+
+    if (showUv) {
+      datasets.push({
+        label: 'UV', data: uvData,
+        borderColor: colors.uv.border, backgroundColor: colors.uv.bg,
+        fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6,
+        borderWidth: 2, yAxisID: 'y'
+      });
+    }
+    if (showPv) {
+      datasets.push({
+        label: 'PV', data: pvData,
+        borderColor: colors.pv.border, backgroundColor: colors.pv.bg,
+        fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6,
+        borderWidth: 2, yAxisID: showBoth ? 'y1' : 'y'
+      });
+    }
+  }
+
+  const textColor = getComputedStyle(document.body).getPropertyValue('--text-secondary').trim();
+  const gridColor = 'rgba(148, 163, 184, 0.1)';
+
+  const options = {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top', labels: { color: textColor, usePointStyle: true, padding: 16 } },
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.95)', titleColor: '#f1f5f9',
+        bodyColor: '#cbd5e1', borderColor: '#334155', borderWidth: 1,
+        padding: 12, cornerRadius: 8
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor } },
+      y: {
+        type: 'linear', position: 'left',
+        grid: { color: gridColor }, ticks: { color: textColor }
+      }
+    }
+  };
+
+  const showBothAxes = (STATE.currentMetric === 'both' && STATE.currentSite !== 'overview')
+    || STATE.currentSite === 'overview';
+
+  if (showBothAxes) {
+    options.scales.y1 = {
+      type: 'linear', position: 'right',
+      grid: { display: false }, ticks: { color: textColor }
+    };
+  }
+
+  if (STATE.trendChart) STATE.trendChart.destroy();
+  STATE.trendChart = new Chart(ctx, {
+    type: STATE.currentSite === 'overview' ? 'bar' : 'line',
+    data: { labels, datasets },
+    options
+  });
+}
+
+// ========== 渲染：质量指标 ==========
+function renderQuality() {
+  const grid = $('qualityGrid');
+  const data = STATE.reportData;
+
+  if (STATE.currentSite === 'overview') {
+    const sites = data.sites || [];
+    const valid = sites.filter(s => s.quality);
+    if (valid.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-muted); padding: 20px;">暂无数据</div>';
+      return;
+    }
+
+    let avgBr = 0, avgDur = 0, avgPvpu = 0;
+    for (const s of valid) {
+      avgBr += s.quality.bounceRate?.value || 0;
+      avgDur += s.quality.avgDuration?.value || 0;
+      avgPvpu += s.quality.pvPerUv?.value || 0;
+    }
+    avgBr /= valid.length;
+    avgDur /= valid.length;
+    avgPvpu /= valid.length;
+
+    const brLevel = avgBr < 30 ? '优秀' : avgBr < 50 ? '良好' : avgBr < 70 ? '一般' : '偏高';
+    const durLevel = avgDur >= 180 ? '优秀' : avgDur >= 60 ? '良好' : avgDur >= 30 ? '一般' : '偏短';
+    const pvLevel = avgPvpu >= 3 ? '优秀' : avgPvpu >= 1.5 ? '良好' : '一般';
+
+    grid.innerHTML = `
+      <div class="quality-item">
+        <div class="quality-label">平均跳出率</div>
+        <div class="quality-value">${avgBr.toFixed(1)}%</div>
+        <span class="quality-level ${getLevelClass(brLevel)}">${brLevel}</span>
+      </div>
+      <div class="quality-item">
+        <div class="quality-label">平均访问时长</div>
+        <div class="quality-value">${avgDur.toFixed(0)}s</div>
+        <span class="quality-level ${getLevelClass(durLevel)}">${durLevel}</span>
+      </div>
+      <div class="quality-item">
+        <div class="quality-label">人均浏览页数</div>
+        <div class="quality-value">${avgPvpu.toFixed(2)}</div>
+        <span class="quality-level ${getLevelClass(pvLevel)}">${pvLevel}</span>
+      </div>
+    `;
+  } else {
+    const site = data.sites.find(s => s.name === STATE.currentSite);
+    const q = site?.quality || {};
+    if (!q || !q.bounceRate) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-muted); padding: 20px;">暂无数据</div>';
+      return;
+    }
+
+    grid.innerHTML = `
+      <div class="quality-item">
+        <div class="quality-label">跳出率</div>
+        <div class="quality-value">${q.bounceRate.value ? q.bounceRate.value.toFixed(1) + '%' : '--'}</div>
+        <span class="quality-level ${getLevelClass(q.bounceRate.level)}">${q.bounceRate.level || '未知'}</span>
+      </div>
+      <div class="quality-item">
+        <div class="quality-label">访问时长</div>
+        <div class="quality-value">${q.avgDuration.value ? q.avgDuration.value.toFixed(0) + 's' : '--'}</div>
+        <span class="quality-level ${getLevelClass(q.avgDuration.level)}">${q.avgDuration.level || '未知'}</span>
+      </div>
+      <div class="quality-item">
+        <div class="quality-label">人均页数</div>
+        <div class="quality-value">${q.pvPerUv?.value ? q.pvPerUv.value.toFixed(2) : '--'}</div>
+        <span class="quality-level ${getLevelClass(q.pvPerUv?.level)}">${q.pvPerUv?.level || '未知'}</span>
+      </div>
+    `;
+  }
+}
+
+// ========== 渲染：AI 分析 ==========
+function renderAI() {
+  const container = $('aiContent');
+  const data = STATE.reportData;
+
+  if (STATE.currentSite === 'overview') {
+    renderOverviewAI(container, data);
+  } else {
+    renderSiteAI(container, data);
+  }
+}
+
+function renderOverviewAI(container, data) {
+  const overall = data.overallAI || {};
+
+  if (!overall.executiveSummary && data.sites?.[0]?.aiReport) {
+    const firstSite = data.sites[0];
+    container.innerHTML = `
+      <div class="ai-summary">${overall.executiveSummary || firstSite.aiReport?.summary || '暂无总览数据'}</div>
+      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        💡 切换到具体站点可查看更详细的 AI 分析
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="ai-summary">${overall.executiveSummary || '暂无总览分析'}</div>
+
+    <div class="ai-tabs">
+      <div class="ai-tab active" data-tab="comparison">📊 横向对比</div>
+      <div class="ai-tab" data-tab="strategy">🎯 战略建议</div>
+    </div>
+
+    <div class="ai-panel active" id="panel-comparison">
+      ${renderCrossSiteComparison(overall.crossSiteComparison)}
+    </div>
+
+    <div class="ai-panel" id="panel-strategy">
+      ${renderStrategyRecommendations(overall.strategicRecommendations)}
+    </div>
+  `;
+
+  bindAiTabs(container);
+}
+
+function renderCrossSiteComparison(comp) {
+  if (!comp) return '<div style="color: var(--text-muted);">暂无对比数据</div>';
+
+  return `
+    <div class="deep-grid">
+      <div class="deep-card">
+        <div class="deep-card-title">📏 UV 差距</div>
+        <div class="deep-card-content">${comp.uvGap || '--'}</div>
+      </div>
+      <div class="deep-card">
+        <div class="deep-card-title">📊 PV 差距</div>
+        <div class="deep-card-content">${comp.pvGap || '--'}</div>
+      </div>
+      <div class="deep-card">
+        <div class="deep-card-title">🎯 质量差距</div>
+        <div class="deep-card-content">${comp.qualityGap || '--'}</div>
+      </div>
+      <div class="deep-card">
+        <div class="deep-card-title">📝 结论</div>
+        <div class="deep-card-content">${comp.conclusion || '--'}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderStrategyRecommendations(strategies) {
+  if (!strategies || strategies.length === 0) return '<div style="color: var(--text-muted);">暂无战略建议</div>';
+
+  return strategies.map(s => `
+    <div class="strategy-card">
+      <div class="strategy-header">
+        <div class="strategy-target">${s.target}</div>
+        <span class="strategy-type">${s.strategy}</span>
+      </div>
+      <div class="strategy-focus">重点：${s.focus}</div>
+      <ul class="strategy-actions">
+        ${(s.actions || []).map(a => `<li>${a}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+function renderSiteAI(container, data) {
+  const site = data.sites.find(s => s.name === STATE.currentSite);
+  const ai = site?.aiReport;
+
+  if (!ai) {
+    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">暂无 AI 分析报告</div>';
+    return;
+  }
+
+  const findingsHtml = (ai.keyFindings || []).map(f => `
+    <div class="finding-card">
+      <div class="finding-icon">${f.icon || '💡'}</div>
+      <div class="finding-text">${f.text || f}</div>
+    </div>
+  `).join('');
+
+  const recsHtml = (ai.recommendations || []).map(r => `
+    <div class="rec-item type-${r.type || 'info'}">
+      <div class="rec-icon">${getTypeIcon(r.type)}</div>
+      <div style="flex: 1;">
+        <div class="rec-title">
+          ${r.title}
+          ${r.priority ? `<span class="rec-priority ${r.priority}">${priorityLabel(r.priority)}</span>` : ''}
+        </div>
+        <div class="rec-detail">${r.detail}</div>
+      </div>
+    </div>
+  `).join('');
+
+  const deep = ai.deepAnalysis || {};
+  const actionPlan = deep.actionPlan || [];
+  const riskPoints = deep.riskPoints || [];
+
+  container.innerHTML = `
+    <div class="ai-summary">${ai.summary || ''}</div>
+
+    <div class="ai-findings">${findingsHtml}</div>
+
+    <div class="ai-tabs">
+      <div class="ai-tab active" data-tab="recommendations">💡 优化建议</div>
+      <div class="ai-tab" data-tab="deep">🔍 深度分析</div>
+      <div class="ai-tab" data-tab="outlook">🔮 趋势展望</div>
+    </div>
+
+    <div class="ai-panel active" id="panel-recommendations">
+      ${recsHtml || '<div style="color: var(--text-muted);">暂无建议</div>'}
+    </div>
+
+    <div class="ai-panel" id="panel-deep">
+      <div class="deep-grid">
+        <div class="deep-card">
+          <div class="deep-card-title">📊 流量规律</div>
+          <div class="deep-card-content">${deep.trafficPattern || '暂无数据'}</div>
+        </div>
+        <div class="deep-card">
+          <div class="deep-card-title">👤 用户行为</div>
+          <div class="deep-card-content">${deep.userBehavior || '暂无数据'}</div>
+        </div>
+        <div class="deep-card">
+          <div class="deep-card-title">🚀 增长驱动</div>
+          <div class="deep-card-content">${deep.growthDrivers || '暂无数据'}</div>
+        </div>
+        <div class="deep-card">
+          <div class="deep-card-title">⚠️ 风险点</div>
+          <ul class="risk-list">
+            ${riskPoints.length > 0 ? riskPoints.map(r => `<li><span class="risk-icon">•</span>${r}</li>`).join('') : '<li style="color: var(--text-muted);">暂无数据</li>'}
+          </ul>
+        </div>
+      </div>
+
+      <div class="deep-card" style="margin-top: 14px;">
+        <div class="deep-card-title">📋 行动计划</div>
+        <ul class="action-list">
+          ${actionPlan.length > 0 ? actionPlan.map((a, i) => `
+            <li>
+              <span class="action-phase">${['短期', '中期', '长期'][i] || '阶段 ' + (i + 1)}</span>
+              <span>${a}</span>
+            </li>
+          `).join('') : '<li style="color: var(--text-muted);">暂无行动计划</li>'}
+        </ul>
+      </div>
+    </div>
+
+    <div class="ai-panel" id="panel-outlook">
+      <div class="ai-outlook">
+        <span class="outlook-label">🔮 趋势展望</span>
+        <span style="line-height: 1.8;">${ai.trendOutlook || ''}</span>
+      </div>
+    </div>
+  `;
+
+  bindAiTabs(container);
+}
+
+function bindAiTabs(container) {
+  container.querySelectorAll('.ai-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      container.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+      container.querySelectorAll('.ai-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      $('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+// ========== 渲染：对比表 ==========
+function renderComparison() {
+  const section = $('comparisonSection');
+  const data = STATE.reportData;
+  const sites = data.sites || [];
+
+  if (STATE.currentSite !== 'overview' || sites.length < 2) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  const tbody = $('comparisonBody');
+
+  tbody.innerHTML = sites.map(s => {
+    const uvChg = formatChange(s.compare?.uvChange);
+    const pvChg = formatChange(s.compare?.pvChange);
+    const bounce = s.today?.bounceRate ? s.today.bounceRate.toFixed(1) + '%' : '--';
+    const ppu = s.today?.pvPerUv ? s.today.pvPerUv.toFixed(2) : '--';
+
+    return `<tr>
+      <td><strong>${s.name}</strong></td>
+      <td>${fmt(s.today?.uv)}</td>
+      <td>${fmt(s.today?.pv)}</td>
+      <td class="stat-change ${uvChg.class}">${uvChg.text}</td>
+      <td class="stat-change ${pvChg.class}">${pvChg.text}</td>
+      <td>${bounce}</td>
+      <td>${ppu}</td>
+      <td><span class="grade-badge ${getLevelClass(s.overallGrade)}">${s.overallGrade || '--'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ========== 主题切换 ==========
+function toggleTheme() {
+  const body = document.body;
+  const next = body.dataset.theme === 'dark' ? 'light' : 'dark';
+  body.dataset.theme = next;
+  $('themeBtn').textContent = next === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('theme', next);
+  if (STATE.reportData) renderChart();
+}
+
+// ========== 主流程 ==========
+function renderAll() {
+  renderStats();
+  renderChart();
+  renderQuality();
+  renderAI();
+  renderComparison();
+}
+
+async function initAndLoad() {
+  const grid = $('statsGrid');
+  grid.innerHTML = '<div class="loading" style="grid-column: 1/-1;"><div class="spinner"></div> 加载数据中...</div>';
+
+  try {
+    STATE.reportData = await loadReportData();
+    updateReportInfo();
+    initSiteTabs();
+    STATE.currentSite = 'overview';
+    renderAll();
+  } catch (e) {
+    console.error(e);
+    grid.innerHTML = `<div class="loading" style="grid-column: 1/-1; color: var(--accent-red);">
+      ❌ 数据加载失败: ${e.message}<br><br>
+      <span style="font-size: 13px; color: var(--text-muted);">
+        请确保 data/report.json 文件存在且格式正确
+      </span>
+    </div>`;
+  }
+}
+
+// ========== 初始化 ==========
+document.addEventListener('DOMContentLoaded', () => {
+  // 恢复主题
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    document.body.dataset.theme = savedTheme;
+    $('themeBtn').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+  }
+
+  // 按钮事件
+  $('themeBtn').addEventListener('click', toggleTheme);
+  $('refreshBtn').addEventListener('click', initAndLoad);
+
+  // 图表指标切换
+  document.querySelectorAll('.metric-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      STATE.currentMetric = btn.dataset.metric;
+      document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (STATE.reportData) renderChart();
+    });
+  });
+
+  // 启动
+  initAndLoad();
+});
+</script>
+</body>
+</html>

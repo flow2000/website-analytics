@@ -1,0 +1,39 @@
+name: 51.la Data Collector
+
+on:
+  schedule:
+    # 每天 UTC 时间 23:30 运行（北京时间 07:30）
+    - cron: '30 23 * * *'
+  workflow_dispatch:  # 支持手动触发
+    inputs:
+      reason:
+        description: '触发原因'
+        required: false
+        default: '手动触发'
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    name: 采集 51.la 数据到 MongoDB
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: cd server && npm install mongodb
+
+      - name: Run data collector
+        env:
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          SITES: ${{ secrets.SITES }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DB: ${{ secrets.MONGODB_DB }}
+          MONGODB_COL: ${{ secrets.MONGODB_COL }}
+        run: cd server && node scripts/collect-data.js

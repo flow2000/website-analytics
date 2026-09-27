@@ -1,0 +1,15 @@
+{
+  "name": "website-analytics-server",
+  "version": "2.0.0",
+  "description": "51.LA 流量趋势分析系统 - 静态站 + MongoDB 导出 API（适配 Netlify / Vercel）",
+  "main": "index.js",
+  "scripts": {
+    "collect": "node scripts/collect-data.js"
+  },
+  "keywords": ["analytics", "51la", "serverless", "netlify", "vercel"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "functions": {
+    "api/export.js": {
+      "memory": 256,
+      "maxDuration": 15
+    }
+  },
+  "routes": [
+    { "src": "/api/export", "dest": "/api/export.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ]
+}
