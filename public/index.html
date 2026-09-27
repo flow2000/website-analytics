@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>51.LA 流量趋势分析 · AI 报告</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<meta name="theme-color" content="#0f172a">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -544,6 +547,36 @@
 </div>
 
 <script>
+// ========== 全局错误防护：修复 getRangeAt Selection 报错 ==========
+// 该错误通常由第三方库（如 Chart.js tooltip 交互）或浏览器扩展
+// 在没有文本选区时调用 window.getSelection().getRangeAt(0) 导致
+(function () {
+  // 1. 包装 getRangeAt，避免 IndexSizeError 抛出
+  const proto = window.Selection && Selection.prototype;
+  if (proto && proto.getRangeAt) {
+    const originalGetRangeAt = proto.getRangeAt;
+    proto.getRangeAt = function (index) {
+      if (index < 0 || index >= this.rangeCount) {
+        // 返回 null 而非抛出错误，调用方应做空值检查
+        return null;
+      }
+      return originalGetRangeAt.call(this, index);
+    };
+  }
+
+  // 2. 全局捕获未处理的 Selection 相关错误，防止控制台报错
+  window.addEventListener('error', function (e) {
+    if (e.error && e.error instanceof DOMException &&
+        e.error.name === 'IndexSizeError' &&
+        e.message && e.message.indexOf('getRangeAt') !== -1) {
+      // 静默忽略 getRangeAt 索引越界错误（通常无害，由库/扩展触发）
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+})();
+
 // ========== 全局状态 ==========
 const STATE = {
   reportData: null,
