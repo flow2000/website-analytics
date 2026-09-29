@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "generatedAt": "2026-09-28T12:57:19.629Z",
+  "generatedAt": "2026-09-29T00:08:12.000Z",
   "generator": "51.LA Analytics AI Engine",
   "dataSource": "51.LA Open API V6",
   "summary": {
@@ -8,172 +8,23 @@
     "totalUv": 81,
     "totalPv": 104,
     "reportDays": 2,
-    "bestSite": "aqcoder.cn",
-    "bestGrade": "待优化",
-    "weakestSite": "bimg.cc",
-    "weakestGrade": "良好"
+    "bestSite": "bimg.cc",
+    "bestGrade": "优秀",
+    "weakestSite": "aqcoder.cn",
+    "weakestGrade": "待优化"
   },
   "sites": [
     {
-      "name": "aqcoder.cn",
-      "maskId": "KRFNvLFZwSFuA2NM",
-      "overallGrade": "待优化",
-      "today": {
-        "uv": 74,
-        "pv": 81,
-        "sv": 75,
-        "ip": 73,
-        "newUser": 72,
-        "bounceRate": 92,
-        "avgDuration": 7.85,
-        "pvPerUv": 1.09
-      },
-      "yesterday": {
-        "uv": 36,
-        "pv": 42,
-        "sv": 37,
-        "ip": 37,
-        "newUser": 32,
-        "bounceRate": 91.89,
-        "avgDuration": 8.48,
-        "pvPerUv": 1.17
-      },
-      "compare": {
-        "uvChange": 105.56,
-        "pvChange": 92.86,
-        "svChange": 102.7,
-        "ipChange": 97.3,
-        "newUserChange": 125
-      },
-      "cumulative": {
-        "monthUv": 366,
-        "monthPv": 436,
-        "monthBounceRate": 92.69,
-        "totalUv": 23499,
-        "totalPv": 26196,
-        "totalBounceRate": 95.08,
-        "topUv": 97,
-        "topPv": 141,
-        "topSv": 103,
-        "topUvDate": "2024-07-02",
-        "topPvDate": "2024-09-16"
-      },
-      "quality": {
-        "bounceRate": {
-          "value": 92,
-          "level": "偏高",
-          "change": 0.11
-        },
-        "avgDuration": {
-          "value": 7.85,
-          "level": "偏短",
-          "change": -0.63
-        },
-        "pvPerUv": {
-          "value": 1.09,
-          "level": "偏低"
-        }
-      },
-      "trend": {
-        "uvTrend": "上升",
-        "pvTrend": "上升",
-        "avgUv": 55,
-        "avgPv": 61.5,
-        "todayUvVsAvg": 34.55,
-        "todayPvVsAvg": 31.71,
-        "daysAnalyzed": 2
-      },
-      "history": [
-        {
-          "date": "2026-09-27",
-          "uv": 36,
-          "pv": 42,
-          "sv": 37,
-          "ip": 37,
-          "bounceRate": 91.89,
-          "avgDuration": 8.48,
-          "newUser": 32
-        },
-        {
-          "date": "2026-09-28",
-          "uv": 74,
-          "pv": 81,
-          "sv": 75,
-          "ip": 73,
-          "bounceRate": 92,
-          "avgDuration": 7.85,
-          "newUser": 72
-        }
-      ],
-      "aiReport": {
-        "summary": "今日访客 74 人，浏览量 81 次。UV 较昨日上升 105.56%，PV 较昨日上升 92.86%。跳出率 92%（偏高），平均访问时长 8 秒（偏短），人均浏览 1.09 页（偏低）。",
-        "keyFindings": [
-          {
-            "icon": "📈",
-            "text": "今日 UV 较昨日上升 105.56%，流量有所回升。"
-          },
-          {
-            "icon": "⚠️",
-            "text": "跳出率高达 92%，绝大多数用户访问单页即离开，落地页体验急需优化。"
-          },
-          {
-            "icon": "⏱️",
-            "text": "平均访问时长仅 8 秒，内容深度不足，用户粘性偏弱。"
-          },
-          {
-            "icon": "📑",
-            "text": "人均浏览仅 1.09 页，需优化内链和相关推荐引导用户深度浏览。"
-          }
-        ],
-        "recommendations": [
-          {
-            "type": "warning",
-            "priority": "high",
-            "title": "跳出率过高，紧急优化落地页",
-            "detail": "当前跳出率 92%，绝大多数用户看完第一页就离开。建议：1）优化首屏加载速度；2）提升首屏内容相关性；3）增加内链引导和相关推荐，目标跳出率降至 60% 以下。"
-          },
-          {
-            "type": "warning",
-            "priority": "high",
-            "title": "访问时长过短，内容深度不足",
-            "detail": "平均仅 8 秒。建议增加图文并茂的深度内容，添加相关文章推荐，引入评论/收藏等互动功能。"
-          },
-          {
-            "type": "info",
-            "priority": "medium",
-            "title": "人均浏览页数偏低",
-            "detail": "人均 1.09 页。建议优化内链布局，在文章底部增加相关推荐和热门文章模块，引导用户深度浏览。"
-          }
-        ],
-        "trendOutlook": "今日 UV 较昨日上升 105.56%，短期趋势向好。但站点整体流量基数尚可（今日 UV 74），需持续观察稳定性。建议保持内容更新节奏，重点优化落地页以降低高跳出率，预计 UV 可稳步提升。",
-        "deepAnalysis": {
-          "trafficPattern": "今日 UV 74，较昨日上升 105.56%。当前采集到近 2 天数据，长期规律有待持续观察。历史最高 UV 为 97（2024-07-02）。",
-          "userBehavior": "跳出率 92%，约 8% 的用户会访问第二页。人均浏览 1.09 页，平均停留 8 秒。",
-          "growthDrivers": "今日新用户 72 人，占 UV 的 97.3%。新用户占比较高，需关注老用户留存。",
-          "riskPoints": [
-            "跳出率高达 92%，流量浪费严重",
-            "平均访问时长仅 8 秒，内容深度不足",
-            "历史数据有限，趋势判断需更多样本"
-          ],
-          "actionPlan": [
-            "短期（1周）：优化 Top 落地页首屏内容和加载速度，目标跳出率降至 60% 以下",
-            "中期（2-4周）：增加相关推荐、热门排行等内链模块，提升人均浏览页数",
-            "长期（1-3月）：建立用户体系（收藏/订阅/评论），提升回访率和访问深度"
-          ]
-        }
-      }
-    },
-    {
       "name": "bimg.cc",
       "maskId": "K3XUEeVtpB9QftHf",
-      "overallGrade": "良好",
+      "overallGrade": "优秀",
       "today": {
         "uv": 7,
         "pv": 23,
         "sv": 10,
         "ip": 7,
         "newUser": 6,
-        "bounceRate": 70,
+        "bounceRate": 70.0,
         "avgDuration": 131.97,
         "pvPerUv": 3.29
       },
@@ -209,8 +60,8 @@
       },
       "quality": {
         "bounceRate": {
-          "value": 70,
-          "level": "一般",
+          "value": 70.0,
+          "level": "良好",
           "change": -13.33
         },
         "avgDuration": {
@@ -226,7 +77,7 @@
       "trend": {
         "uvTrend": "下降",
         "pvTrend": "下降",
-        "avgUv": 8,
+        "avgUv": 8.0,
         "avgPv": 24.5,
         "todayUvVsAvg": -12.5,
         "todayPvVsAvg": -6.12,
@@ -241,7 +92,8 @@
           "ip": 9,
           "bounceRate": 83.33,
           "avgDuration": 133.32,
-          "newUser": 7
+          "newUser": 7,
+          "pvPerUv": 2.89
         },
         {
           "date": "2026-09-28",
@@ -249,25 +101,26 @@
           "pv": 23,
           "sv": 10,
           "ip": 7,
-          "bounceRate": 70,
+          "bounceRate": 70.0,
           "avgDuration": 131.97,
-          "newUser": 6
+          "newUser": 6,
+          "pvPerUv": 3.29
         }
       ],
       "aiReport": {
-        "summary": "今日访客 7 人，浏览量 23 次。UV 较昨日下降 22.22%，PV 较昨日下降 11.54%。跳出率 70%（一般），平均访问时长 132 秒（良好），人均浏览 3.29 页（良好）。",
+        "summary": "今日访客 7 人，浏览量 23 次。UV 较昨日下降 22.22%，PV 较昨日-11.54%。跳出率 70.0%（良好），平均访问时长 131.97 秒（良好），人均浏览 3.29 页（良好）。",
         "keyFindings": [
           {
             "icon": "📉",
             "text": "今日 UV 较昨日下降 22.22%，流量有所下滑。"
           },
           {
-            "icon": "📊",
-            "text": "跳出率 70%，处于中等水平，仍有优化空间。"
+            "icon": "✅",
+            "text": "跳出率 70.0%，处于良好水平。"
           },
           {
             "icon": "⏱️",
-            "text": "平均访问时长 132 秒，用户停留时间良好，内容有一定吸引力。"
+            "text": "平均访问时长 131.97 秒，用户停留时间良好，内容有一定吸引力。"
           },
           {
             "icon": "📑",
@@ -285,11 +138,161 @@
         "trendOutlook": "今日 UV 较昨日下降 22.22%，短期趋势承压。但站点整体流量基数较小（今日 UV 7），需持续观察稳定性。建议保持内容更新节奏，预计 UV 可稳步提升。",
         "deepAnalysis": {
           "trafficPattern": "今日 UV 7，较昨日下降 22.22%。当前采集到近 2 天数据，长期规律有待持续观察。历史最高 UV 为 70（2024-05-11）。",
-          "userBehavior": "跳出率 70%，约 30% 的用户会访问第二页。人均浏览 3.29 页，平均停留 132 秒。",
+          "userBehavior": "跳出率 70.0%，约 30.0% 的用户会访问第二页。人均浏览 3.29 页，平均停留 131.97 秒。",
           "growthDrivers": "今日新用户 6 人，占 UV 的 85.71%。新用户占比较高，需关注老用户留存。",
           "riskPoints": [
-            "历史数据有限，趋势判断需更多样本",
-            "流量基数较小，抗波动能力弱"
+            "历史数据有限，趋势判断需更多样本"
+          ],
+          "actionPlan": [
+            "短期（1周）：保持现有策略，持续监控数据变化",
+            "中期（2-4周）：增加相关推荐、热门排行等内链模块，提升人均浏览页数",
+            "长期（1-3月）：建立用户体系（收藏/订阅/评论），提升回访率和访问深度"
+          ]
+        }
+      }
+    },
+    {
+      "name": "aqcoder.cn",
+      "maskId": "KRFNvLFZwSFuA2NM",
+      "overallGrade": "待优化",
+      "today": {
+        "uv": 74,
+        "pv": 81,
+        "sv": 75,
+        "ip": 73,
+        "newUser": 72,
+        "bounceRate": 92.0,
+        "avgDuration": 7.85,
+        "pvPerUv": 1.09
+      },
+      "yesterday": {
+        "uv": 36,
+        "pv": 42,
+        "sv": 37,
+        "ip": 37,
+        "newUser": 32,
+        "bounceRate": 91.89,
+        "avgDuration": 8.48,
+        "pvPerUv": 1.17
+      },
+      "compare": {
+        "uvChange": 105.56,
+        "pvChange": 92.86,
+        "svChange": 102.7,
+        "ipChange": 97.3,
+        "newUserChange": 125.0
+      },
+      "cumulative": {
+        "monthUv": 366,
+        "monthPv": 436,
+        "monthBounceRate": 92.69,
+        "totalUv": 23499,
+        "totalPv": 26196,
+        "totalBounceRate": 95.08,
+        "topUv": 97,
+        "topPv": 141,
+        "topSv": 103,
+        "topUvDate": "2024-07-02",
+        "topPvDate": "2024-09-16"
+      },
+      "quality": {
+        "bounceRate": {
+          "value": 92.0,
+          "level": "偏高",
+          "change": 0.11
+        },
+        "avgDuration": {
+          "value": 7.85,
+          "level": "偏短",
+          "change": -0.63
+        },
+        "pvPerUv": {
+          "value": 1.09,
+          "level": "偏低"
+        }
+      },
+      "trend": {
+        "uvTrend": "上升",
+        "pvTrend": "上升",
+        "avgUv": 55.0,
+        "avgPv": 61.5,
+        "todayUvVsAvg": 34.55,
+        "todayPvVsAvg": 31.71,
+        "daysAnalyzed": 2
+      },
+      "history": [
+        {
+          "date": "2026-09-27",
+          "uv": 36,
+          "pv": 42,
+          "sv": 37,
+          "ip": 37,
+          "bounceRate": 91.89,
+          "avgDuration": 8.48,
+          "newUser": 32,
+          "pvPerUv": 1.17
+        },
+        {
+          "date": "2026-09-28",
+          "uv": 74,
+          "pv": 81,
+          "sv": 75,
+          "ip": 73,
+          "bounceRate": 92.0,
+          "avgDuration": 7.85,
+          "newUser": 72,
+          "pvPerUv": 1.09
+        }
+      ],
+      "aiReport": {
+        "summary": "今日访客 74 人，浏览量 81 次。UV 较昨日上升 105.56%，PV 较昨日+92.86%。跳出率 92.0%（偏高），平均访问时长 7.85 秒（偏短），人均浏览 1.09 页（偏低）。",
+        "keyFindings": [
+          {
+            "icon": "📈",
+            "text": "今日 UV 较昨日上升 105.56%，流量显著增长。"
+          },
+          {
+            "icon": "⚠️",
+            "text": "跳出率高达 92.0%，绝大多数用户访问单页即离开，落地页体验急需优化。"
+          },
+          {
+            "icon": "⏱️",
+            "text": "平均访问时长仅 7.85 秒，内容深度不足，用户粘性偏弱。"
+          },
+          {
+            "icon": "📑",
+            "text": "人均浏览仅 1.09 页，需优化内链和相关推荐引导用户深度浏览。"
+          }
+        ],
+        "recommendations": [
+          {
+            "type": "warning",
+            "priority": "high",
+            "title": "跳出率过高，紧急优化落地页",
+            "detail": "当前跳出率 92.0%，绝大多数用户看完第一页就离开。建议：1）优化首屏加载速度；2）提升首屏内容相关性；3）增加内链引导和相关推荐，目标跳出率降至 60% 以下。"
+          },
+          {
+            "type": "warning",
+            "priority": "high",
+            "title": "访问时长过短，内容深度不足",
+            "detail": "平均仅 7.85 秒。建议增加图文并茂的深度内容，添加相关文章推荐，引入评论/收藏等互动功能。"
+          },
+          {
+            "type": "info",
+            "priority": "medium",
+            "title": "人均浏览页数偏低",
+            "detail": "人均 1.09 页。建议优化内链布局，在文章底部增加相关推荐和热门文章模块，引导用户深度浏览。"
+          }
+        ],
+        "trendOutlook": "今日 UV 较昨日上升 105.56%，短期趋势向好。但站点整体流量基数较大（今日 UV 74），需持续观察稳定性。建议保持内容更新节奏，重点优化落地页以降低高跳出率，预计 UV 可稳步提升。",
+        "deepAnalysis": {
+          "trafficPattern": "今日 UV 74，较昨日上升 105.56%。当前采集到近 2 天数据，长期规律有待持续观察。历史最高 UV 为 97（2024-07-02）。",
+          "userBehavior": "跳出率 92.0%，约 8.0% 的用户会访问第二页。人均浏览 1.09 页，平均停留 7.85 秒。",
+          "growthDrivers": "今日新用户 72 人，占 UV 的 97.3%。新用户占比较高，需关注老用户留存。",
+          "riskPoints": [
+            "跳出率高达 92.0%，流量浪费严重",
+            "平均访问时长仅 7.85 秒，内容深度不足",
+            "历史数据有限，趋势判断需更多样本"
           ],
           "actionPlan": [
             "短期（1周）：优化 Top 落地页首屏内容和加载速度，目标跳出率降至 60% 以下",
@@ -301,14 +304,24 @@
     }
   ],
   "overallAI": {
-    "executiveSummary": "当前监控 2 个站点（aqcoder.cn、bimg.cc），合计日 UV 81、PV 104。aqcoder.cn 流量领先（UV 74），bimg.cc 流量较小（UV 7）。部分站点跳出率偏高，需针对性优化。建议对流量领先站点采取「扩张+质量优化」策略，对流量较小站点采取「基础质量攻坚」策略。",
+    "executiveSummary": "当前监控 2 个站点（bimg.cc、aqcoder.cn），合计日 UV 81、PV 104。bimg.cc 流量领先（UV 7），aqcoder.cn 流量较小（UV 74）。部分站点跳出率偏高，需针对性优化。",
     "crossSiteComparison": {
-      "uvGap": "aqcoder.cn 领先 bimg.cc 约 957.14%（74 vs 7）",
-      "pvGap": "aqcoder.cn 领先 bimg.cc 约 252.17%（81 vs 23）",
-      "qualityGap": "aqcoder.cn 跳出率 92%，bimg.cc 跳出率 70%；访问时长差异较大（8s vs 132s）",
-      "conclusion": "各站点均处于「基础质量优化期」，共同痛点是高跳出率。aqcoder.cn 可侧重扩张，bimg.cc 需先夯实内容基础。"
+      "uvGap": "bimg.cc 领先 aqcoder.cn 约 90.54%（7 vs 74）",
+      "pvGap": "bimg.cc 领先 aqcoder.cn 约 71.6%（23 vs 81）",
+      "qualityGap": "bimg.cc 跳出率 70.0%，aqcoder.cn 跳出率 92.0%；访问时长差异较大（131.97s vs 7.85s）",
+      "conclusion": "各站点均处于「质量优化期」，共同痛点是高跳出率。"
     },
     "strategicRecommendations": [
+      {
+        "target": "bimg.cc",
+        "strategy": "基础质量攻坚策略",
+        "focus": "优先提升流量质量和内容深度",
+        "actions": [
+          "优化落地页首屏，降低跳出率",
+          "丰富内容深度，延长访问时长",
+          "建立内链网络，提升人均浏览页数"
+        ]
+      },
       {
         "target": "aqcoder.cn",
         "strategy": "扩张+质量优化策略",
@@ -317,16 +330,6 @@
           "优化落地页首屏，降低跳出率",
           "加大 SEO 投入，拓展长尾关键词",
           "尝试付费推广，测试 ROI"
-        ]
-      },
-      {
-        "target": "bimg.cc",
-        "strategy": "基础质量攻坚策略",
-        "focus": "优先提升流量质量和内容深度",
-        "actions": [
-          "优化落地页，降低跳出率至 60% 以下",
-          "丰富内容深度，延长访问时长",
-          "建立内链网络，提升人均浏览页数"
         ]
       }
     ]
