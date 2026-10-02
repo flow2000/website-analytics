@@ -81,8 +81,9 @@ function buildSite(siteExport) {
     .map((r) => ({ date: r.date, data: r.data }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const todayRec = records[0];
-  const yesterdayRec = records[1] || todayRec;
+  // records 按日期升序，today 取最后一条（最新日期）
+  const todayRec = records[records.length - 1];
+  const yesterdayRec = records[records.length - 2] || todayRec;
 
   const today = {
     uv: num(todayRec.data.curUv),

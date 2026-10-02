@@ -1,17 +1,17 @@
 {
   "version": "1.0",
-  "generatedAt": "2026-10-02T00:05:52.713Z",
+  "generatedAt": "2026-10-02T00:51:52.834Z",
   "generator": "51.LA Analytics Engine",
   "dataSource": "51.LA Open API V6",
   "summary": {
     "totalSites": 2,
-    "totalUv": 45,
-    "totalPv": 68,
+    "totalUv": 15,
+    "totalPv": 17,
     "reportDays": 6,
     "bestSite": "博客",
     "bestGrade": "待优化",
     "weakestSite": "壁纸网站",
-    "weakestGrade": "待优化",
+    "weakestGrade": "一般",
     "dateRange": {
       "start": "2026-09-27",
       "end": "2026-10-02"
@@ -21,31 +21,31 @@
     {
       "name": "博客",
       "today": {
-        "uv": 36,
-        "pv": 42,
-        "sv": 37,
-        "ip": 37,
-        "newUser": 32,
-        "bounceRate": 91.89,
-        "avgDuration": 8,
-        "pvPerUv": 1.17
+        "uv": 15,
+        "pv": 17,
+        "sv": 15,
+        "ip": 15,
+        "newUser": 15,
+        "bounceRate": 86.67,
+        "avgDuration": 10,
+        "pvPerUv": 1.13
       },
       "yesterday": {
-        "uv": 74,
-        "pv": 81,
-        "sv": 75,
-        "ip": 73,
-        "newUser": 72,
-        "bounceRate": 92,
-        "avgDuration": 8,
-        "pvPerUv": 1.09
+        "uv": 62,
+        "pv": 62,
+        "sv": 62,
+        "ip": 59,
+        "newUser": 62,
+        "bounceRate": 100,
+        "avgDuration": 0,
+        "pvPerUv": 1
       },
       "compare": {
-        "uvChange": -51.35,
-        "pvChange": -48.15,
-        "svChange": -50.67,
-        "ipChange": -49.32,
-        "newUserChange": -55.56
+        "uvChange": -75.81,
+        "pvChange": -72.58,
+        "svChange": -75.81,
+        "ipChange": -74.58,
+        "newUserChange": -75.81
       },
       "cumulative": {
         "monthUv": 111,
@@ -62,17 +62,17 @@
       },
       "quality": {
         "bounceRate": {
-          "value": 91.89,
+          "value": 86.67,
           "level": "偏高",
-          "change": -0.12
+          "change": -13.33
         },
         "avgDuration": {
-          "value": 8,
+          "value": 10,
           "level": "偏短",
           "change": 0
         },
         "pvPerUv": {
-          "value": 1.17,
+          "value": 1.13,
           "level": "偏低"
         }
       },
@@ -81,8 +81,8 @@
         "pvTrend": "下降",
         "avgUv": 43.17,
         "avgPv": 45.67,
-        "todayUvVsAvg": -16.61,
-        "todayPvVsAvg": -8.04,
+        "todayUvVsAvg": -65.25,
+        "todayPvVsAvg": -62.78,
         "daysAnalyzed": 6
       },
       "history": [
@@ -158,31 +158,31 @@
     {
       "name": "壁纸网站",
       "today": {
-        "uv": 9,
-        "pv": 26,
-        "sv": 12,
-        "ip": 9,
-        "newUser": 7,
-        "bounceRate": 83.33,
-        "avgDuration": 133,
-        "pvPerUv": 2.89
+        "uv": 0,
+        "pv": 0,
+        "sv": 0,
+        "ip": 0,
+        "newUser": 0,
+        "bounceRate": 0,
+        "avgDuration": 0,
+        "pvPerUv": 0
       },
       "yesterday": {
-        "uv": 7,
-        "pv": 23,
-        "sv": 10,
-        "ip": 7,
-        "newUser": 6,
-        "bounceRate": 70,
-        "avgDuration": 132,
-        "pvPerUv": 3.29
+        "uv": 5,
+        "pv": 5,
+        "sv": 5,
+        "ip": 5,
+        "newUser": 5,
+        "bounceRate": 100,
+        "avgDuration": 5,
+        "pvPerUv": 1
       },
       "compare": {
-        "uvChange": 28.57,
-        "pvChange": 13.04,
-        "svChange": 20,
-        "ipChange": 28.57,
-        "newUserChange": 16.67
+        "uvChange": -100,
+        "pvChange": -100,
+        "svChange": -100,
+        "ipChange": -100,
+        "newUserChange": -100
       },
       "cumulative": {
         "monthUv": 7,
@@ -199,18 +199,18 @@
       },
       "quality": {
         "bounceRate": {
-          "value": 83.33,
-          "level": "偏高",
-          "change": 19.04
+          "value": 0,
+          "level": "理想",
+          "change": -100
         },
         "avgDuration": {
-          "value": 133,
-          "level": "理想",
-          "change": 0.76
+          "value": 0,
+          "level": "偏短",
+          "change": -100
         },
         "pvPerUv": {
-          "value": 2.89,
-          "level": "正常"
+          "value": 0,
+          "level": "偏低"
         }
       },
       "trend": {
@@ -218,8 +218,8 @@
         "pvTrend": "下降",
         "avgUv": 6.33,
         "avgPv": 11.83,
-        "todayUvVsAvg": 42.18,
-        "todayPvVsAvg": 119.78,
+        "todayUvVsAvg": -100,
+        "todayPvVsAvg": -100,
         "daysAnalyzed": 6
       },
       "history": [
@@ -290,7 +290,7 @@
           "pvPerUv": 0
         }
       ],
-      "overallGrade": "待优化"
+      "overallGrade": "一般"
     }
   ],
   "dateRange": {
