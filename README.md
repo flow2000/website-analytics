@@ -125,17 +125,25 @@ server/
 
 ### 3. 生成 AI 报告
 
-使用导出 API 获取数据，交给 AI 生成分析报告：
+**推荐使用 `format=report` 格式**，导出的数据已经是 report.json 的结构（含 today/history/quality/compare/summary），AI 只需添加 `aiReport` 和 `overallAI` 字段即可。
 
 ```bash
-# 导出最近 14 天数据（JSON 格式）
+# 推荐：导出 report 格式（AI 直接用）
+curl "https://your-domain.com/api/export?key=your-password&format=report&days=14" > report-data.json
+
+# 原始 JSON 格式（完整原始数据）
 curl "https://your-domain.com/api/export?key=your-password&days=14"
 
-# 导出指定站点数据（CSV 格式）
+# CSV 表格格式
 curl "https://your-domain.com/api/export?key=your-password&site=example.com&format=csv"
 ```
 
-将 AI 生成的 `report.json` 放到 `public/data/` 目录，提交并推送。
+**AI 工作流程：**
+
+1. 调用 `/api/export?format=report&days=14` 获取结构化数据
+2. AI 分析数据，为每个站点生成 `aiReport` 字段，总览生成 `overallAI` 字段
+3. 将结果保存为 `public/data/report.json`
+4. `git commit && git push`，网站自动更新
 
 ### 4. 部署到 Netlify / Vercel
 
@@ -163,11 +171,19 @@ curl "https://your-domain.com/api/export?key=your-password&site=example.com&form
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `key` | string | ✅ | 访问密码（需与环境变量 `EXPORT_KEY` 一致） |
-| `format` | string | ❌ | 导出格式：`json`（默认）或 `csv` |
+| `format` | string | ❌ | 导出格式：`json`（默认原始）、`csv`、`report`（推荐给 AI） |
 | `site` | string | ❌ | 指定站点名，留空则导出全部站点 |
 | `days` | number | ❌ | 最近 N 天的数据 |
 | `start` | string | ❌ | 开始日期（YYYY-MM-DD） |
 | `end` | string | ❌ | 结束日期（YYYY-MM-DD） |
+
+**三种导出格式对比：**
+
+| 格式 | 适用场景 | 特点 |
+|------|----------|------|
+| `json` | 程序处理、调试 | 51.la 原始字段（curUv/curPv 等），完整原始数据 |
+| `csv` | Excel 分析 | 表格格式，可直接打开 |
+| `report` | **AI 生成报告** | ✅ 已转换为 report.json 结构，AI 只需添加 aiReport 字段 |
 
 **JSON 响应格式：**
 
@@ -191,6 +207,48 @@ curl "https://your-domain.com/api/export?key=your-password&site=example.com&form
   ]
 }
 ```
+
+**Report 格式响应（推荐给 AI 使用）：**
+
+直接输出与 `report.json` 一致的结构（不含 AI 分析部分），AI 只需在每个站点添加 `aiReport`、在顶层添加 `overallAI` 即可推送：
+
+```json
+{
+  "version": "1.0",
+  "generatedAt": "2026-09-27T00:00:00.000Z",
+  "generator": "51.LA Analytics Export API",
+  "dataSource": "51.LA Open API V6",
+  "summary": {
+    "totalSites": 2,
+    "totalUv": 2730,
+    "totalPv": 7670,
+    "reportDays": 14,
+    "bestSite": "site1.com",
+    "bestGrade": "良好",
+    "weakestSite": "site2.com",
+    "weakestGrade": "一般"
+  },
+  "sites": [
+    {
+      "name": "site1.com",
+      "overallGrade": "良好",
+      "today": { "uv": 520, "pv": 1280, "ip": 480, "..." : "..." },
+      "compare": { "uvChange": 12.5, "pvChange": 8.3, "..." : "..." },
+      "quality": {
+        "bounceRate": { "value": 45.2, "level": "良好" },
+        "avgDuration": { "value": 125, "level": "一般" },
+        "pvPerUv": { "value": 2.46, "level": "良好" }
+      },
+      "history": [
+        { "date": "2026-09-20", "uv": 480, "pv": 1150, "..." : "..." }
+      ]
+    }
+  ],
+  "overallAI": null
+}
+```
+
+> 💡 **AI 提示词建议**：调用此格式后，告诉 AI "在每个站点对象中添加 aiReport 字段，在顶层添加 overallAI 字段，其他内容保持不变，输出完整的 JSON"，出错率最低。
 
 **错误响应：**
 
@@ -412,6 +470,46 @@ python -m http.server 8080 --directory public
 | `MONGODB_URI` | MongoDB 连接字符串 | - |
 | `MONGODB_DB` | 数据库名 | `website_statistics` |
 | `MONGODB_COL` | 集合名 | `51.la` |
+
+## 🔍 常见问题
+
+### Q: 网站运行几天后就没有 AI 分析了？
+
+**现象：** 前几天正常，之后 AI 分析区域显示"AI 分析待生成"。
+
+**原因分析（按概率排序）：**
+
+1. **AI 生成流程中断** - 外部 AI 没有定时调用导出 API 并推送 report.json
+   - ✅ 解决：确保 AI 脚本/工作流每天定时运行
+   - ✅ 使用 `format=report` 格式，降低 AI 生成 JSON 的出错率
+
+2. **GitHub Actions 采集失败** - 数据采集失败导致 MongoDB 没有新数据
+   - ✅ 检查：GitHub → Actions → "51.la Data Collector" 查看运行状态
+   - ✅ 采集脚本自带 3 次重试机制，失败时 workflow 会标红
+   - ✅ 常见原因：51.la 密钥过期、MongoDB 连接问题、网络波动
+
+3. **AI 生成的 JSON 格式错误** - AI 输出的 JSON 不符合规范
+   - ✅ 使用 `format=report` 格式，AI 只需添加 `aiReport` 字段，出错率最低
+   - ✅ 提示词建议："在每个站点对象中添加 aiReport 字段，在顶层添加 overallAI 字段，其他内容保持不变，输出完整的 JSON，不要省略字段"
+
+4. **report.json 没有推送到正确路径**
+   - ✅ 确保文件路径是 `public/data/report.json`
+   - ✅ 确保推送到 `main` 分支
+
+### Q: 数据日期不对（差一天）？
+
+**原因：** 时区问题。51.la 按北京时间统计数据，但代码用了 UTC 日期。
+
+**解决：** 采集脚本已修复为使用北京时间存储日期。确保你使用的是最新版本的 `scripts/collect-data.js`。
+
+### Q: 导出 API 报错 500？
+
+**常见原因：**
+- MongoDB 连接失败（检查 `MONGODB_URI` 环境变量）
+- 集合不存在（首次采集后自动创建）
+- 密码错误（返回 403，不是 500）
+
+**调试：** 在 Vercel/Netlify 的函数日志中查看详细错误信息。
 
 ## 🔐 安全建议
 

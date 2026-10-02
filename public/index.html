@@ -886,7 +886,49 @@ function priorityLabel(p) {
 async function loadReportData() {
   const res = await fetch('data/report.json?_=' + Date.now());
   if (!res.ok) throw new Error('无法加载 data/report.json (HTTP ' + res.status + ')');
-  return await res.json();
+  const data = await res.json();
+  validateReportData(data);
+  return data;
+}
+
+/**
+ * 校验 report.json 数据完整性
+ * 返回警告信息（不致命），致命错误直接抛出
+ */
+function validateReportData(data) {
+  const warnings = [];
+
+  if (!data || typeof data !== 'object') {
+    throw new Error('report.json 格式错误：不是有效的 JSON 对象');
+  }
+  if (!data.sites || !Array.isArray(data.sites) || data.sites.length === 0) {
+    throw new Error('report.json 缺少站点数据（sites 数组为空）');
+  }
+
+  // 检查 AI 分析是否存在
+  let hasAI = false;
+  for (const site of data.sites) {
+    if (site.aiReport && (site.aiReport.summary || site.aiReport.keyFindings || site.aiReport.recommendations)) {
+      hasAI = true;
+      break;
+    }
+  }
+  if (data.overallAI && (data.overallAI.executiveSummary || data.overallAI.crossSiteComparison)) {
+    hasAI = true;
+  }
+  data._hasAI = hasAI;
+
+  // 检查数据新鲜度
+  if (data.generatedAt) {
+    const ageHours = (Date.now() - new Date(data.generatedAt).getTime()) / (1000 * 60 * 60);
+    data._ageHours = ageHours;
+  }
+
+  // 检查历史数据天数
+  const minDays = Math.min(...data.sites.map(s => (s.history || []).length));
+  data._minDays = minDays;
+
+  return warnings;
 }
 
 // ========== 报告信息栏 ==========
@@ -898,7 +940,29 @@ function updateReportInfo() {
   const siteCount = data.sites?.length || 0;
   const dataSource = data.dataSource || data.generator || 'AI 生成';
 
-  infoEl.innerHTML = `📄 <strong>AI 分析报告</strong> · ${siteCount} 个站点 · 数据来源：${dataSource}`;
+  // 数据新鲜度提示
+  let freshnessHtml = '';
+  if (data._ageHours !== undefined) {
+    const age = data._ageHours;
+    if (age < 1) {
+      freshnessHtml = '<span style="color: var(--accent-green);">● 数据新鲜</span>';
+    } else if (age < 24) {
+      freshnessHtml = `<span style="color: var(--accent-yellow);">● ${age.toFixed(0)} 小时前更新</span>`;
+    } else {
+      const days = (age / 24).toFixed(1);
+      freshnessHtml = `<span style="color: var(--accent-red);">● ${days} 天前更新</span>`;
+    }
+  }
+
+  // AI 状态
+  let aiStatusHtml = '';
+  if (data._hasAI) {
+    aiStatusHtml = '<span style="color: var(--accent-green);">🤖 AI 分析已就绪</span>';
+  } else {
+    aiStatusHtml = '<span style="color: var(--accent-yellow);">⏳ AI 分析待生成</span>';
+  }
+
+  infoEl.innerHTML = `📄 <strong>AI 分析报告</strong> · ${siteCount} 个站点 · ${dataSource} · ${freshnessHtml} · ${aiStatusHtml}`;
 
   if (data.generatedAt) {
     timeEl.innerHTML = `🕐 生成时间：<strong>${new Date(data.generatedAt).toLocaleString('zh-CN')}</strong>`;
@@ -1241,13 +1305,25 @@ function renderAI() {
 
 function renderOverviewAI(container, data) {
   const overall = data.overallAI || {};
+  const hasOverallAI = overall && (overall.executiveSummary || overall.crossSiteComparison || overall.strategicRecommendations);
 
-  if (!overall.executiveSummary && data.sites?.[0]?.aiReport) {
-    const firstSite = data.sites[0];
+  // 如果没有总览 AI 分析，显示友好提示
+  if (!hasOverallAI) {
+    const hasAnyAI = data._hasAI;
     container.innerHTML = `
-      <div class="ai-summary">${overall.executiveSummary || firstSite.aiReport?.summary || '暂无总览数据'}</div>
-      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
-        💡 切换到具体站点可查看更详细的 AI 分析
+      <div class="ai-summary">
+        📊 总览数据已加载，包含 ${data.sites.length} 个站点的流量统计。
+      </div>
+      <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 20px; text-align: center;">
+        <div style="font-size: 36px; margin-bottom: 12px;">⏳</div>
+        <div style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">总览 AI 分析待生成</div>
+        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+          数据已就绪，等待 AI 生成分析报告。<br>
+          ${hasAnyAI ? '部分站点已有 AI 分析，点击站点标签查看详情。' : '所有站点的 AI 分析均待生成。'}
+        </div>
+        <div style="margin-top: 14px; padding: 10px 14px; background: var(--card-bg); border-radius: 8px; font-size: 12px; color: var(--text-muted); display: inline-block; text-align: left;">
+          💡 提示：使用 <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">format=report</code> 导出数据交给 AI，生成后推送 report.json 即可
+        </div>
       </div>
     `;
     return;
@@ -1318,9 +1394,29 @@ function renderStrategyRecommendations(strategies) {
 function renderSiteAI(container, data) {
   const site = data.sites.find(s => s.name === STATE.currentSite);
   const ai = site?.aiReport;
+  const hasAI = ai && (ai.summary || ai.keyFindings || ai.recommendations);
 
-  if (!ai) {
-    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">暂无 AI 分析报告</div>';
+  if (!hasAI) {
+    const historyDays = (site?.history || []).length;
+    container.innerHTML = `
+      <div class="ai-summary">
+        📊 <strong>${site?.name || '站点'}</strong> 的流量数据已就绪，共 ${historyDays} 天历史记录。
+      </div>
+      <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 24px; text-align: center;">
+        <div style="font-size: 42px; margin-bottom: 14px;">🤖⏳</div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">AI 分析待生成</div>
+        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.8; max-width: 500px; margin: 0 auto;">
+          流量统计数据已加载，但 AI 分析报告尚未生成。<br>
+          数据采集正常运行，等待 AI 分析生成后推送即可显示。
+        </div>
+        <div style="margin-top: 16px; padding: 12px 16px; background: var(--card-bg); border-radius: 8px; font-size: 12px; color: var(--text-muted); display: inline-block; text-align: left;">
+          <div style="margin-bottom: 6px; font-weight: 600; color: var(--text-secondary);">💡 AI 生成流程：</div>
+          <div>1. 调用导出 API：<code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px; font-size: 11px;">?format=report&days=14</code></div>
+          <div>2. AI 生成分析报告，添加 aiReport 字段</div>
+          <div>3. 推送 report.json 到仓库，自动更新网站</div>
+        </div>
+      </div>
+    `;
     return;
   }
 
