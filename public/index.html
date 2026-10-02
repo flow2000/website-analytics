@@ -674,6 +674,10 @@ function render() {
   renderQuality(data);
   renderAI();
   renderComparison(data);
+  
+  // 所有内容渲染完成后再绑定事件
+  bindSiteTabs();
+  bindMetricToggle();
 }
 
 function renderReportInfo(data) {
@@ -746,10 +750,6 @@ function renderReportInfo(data) {
       </div>
     </div>
   `;
-  
-  // 绑定事件
-  bindSiteTabs();
-  bindMetricToggle();
 }
 
 function renderSiteTabs(data) {
