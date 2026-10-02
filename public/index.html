@@ -680,10 +680,24 @@ function render() {
   bindMetricToggle();
 }
 
+function getLatestDate(data) {
+  // 获取所有站点中最新的历史数据日期
+  const allDates = [];
+  (data.sites || []).forEach(site => {
+    (site.history || []).forEach(h => {
+      if (h.date) allDates.push(h.date);
+    });
+  });
+  if (allDates.length === 0) return null;
+  return allDates.sort()[allDates.length - 1];
+}
+
 function renderReportInfo(data) {
   const freshness = getDataFreshness(data.generatedAt);
   const freshnessClass = freshness === 'fresh' ? '' : (freshness === 'stale' ? 'stale' : 'expired');
-  const freshnessText = freshness === 'fresh' ? '数据新鲜' : (freshness === 'stale' ? '数据较旧' : '数据过期');
+  
+  const latestDate = getLatestDate(data);
+  const latestDateText = latestDate ? latestDate : '--';
   
   const dateRange = data.summary?.dateRange;
   const dateText = dateRange ? `${dateRange.start} ~ ${dateRange.end}` : `${data.summary?.reportDays || 0} 天`;
@@ -693,7 +707,7 @@ function renderReportInfo(data) {
     <div class="report-info-bar">
       <div class="report-info-indicator ${freshnessClass}"></div>
       <div class="report-info-text">📄 <strong>AI 分析报告</strong> · ${data.summary?.totalSites || 0} 个站点 · ${data.dataSource || ''}</div>
-      <div class="report-info-text">● ${getTimeAgo(data.generatedAt)}</div>
+      <div class="report-info-text">📅 数据日期：<strong>${latestDateText}</strong></div>
       <div class="report-info-text">${data._hasOverallAI ? '🤖 AI 分析已生成' : '⏳ AI 分析待生成'}</div>
       <div class="report-info-spacer"></div>
       <div class="report-info-text">🕐 生成时间：<strong>${formatDateTime(data.generatedAt)}</strong></div>
@@ -796,6 +810,18 @@ function renderStats(data) {
   const grid = $('statsGrid');
   const sites = data.sites || [];
   
+  const latestDate = getLatestDate(data);
+  const prevDate = (() => {
+    const allDates = [];
+    (data.sites || []).forEach(site => {
+      (site.history || []).forEach(h => { if (h.date) allDates.push(h.date); });
+    });
+    const sorted = allDates.sort();
+    return sorted.length >= 2 ? sorted[sorted.length - 2] : null;
+  })();
+  const dateLabel = latestDate ? formatDate(latestDate) : '最新';
+  const prevLabel = prevDate ? formatDate(prevDate) : '前一日';
+  
   if (STATE.currentSite === 'overview') {
     // 总览模式：汇总所有站点
     const totalUv = sites.reduce((sum, s) => sum + (s.today?.uv || 0), 0);
@@ -818,7 +844,7 @@ function renderStats(data) {
         <div class="stat-value">${formatNumber(totalUv)}</div>
         <div class="stat-change ${uvChange >= 0 ? 'up' : 'down'}">
           ${uvChange >= 0 ? '↑' : '↓'} ${Math.abs(uvChange).toFixed(1)}%
-          <span style="color:var(--text-muted);">${sites.length} 个站点</span>
+          <span style="color:var(--text-muted);">较 ${prevLabel}</span>
         </div>
       </div>
       <div class="stat-card">
@@ -827,7 +853,7 @@ function renderStats(data) {
         <div class="stat-value">${formatNumber(totalPv)}</div>
         <div class="stat-change ${pvChange >= 0 ? 'up' : 'down'}">
           ${pvChange >= 0 ? '↑' : '↓'} ${Math.abs(pvChange).toFixed(1)}%
-          <span style="color:var(--text-muted);">累计页面浏览</span>
+          <span style="color:var(--text-muted);">较 ${prevLabel}</span>
         </div>
       </div>
       <div class="stat-card">
@@ -835,7 +861,7 @@ function renderStats(data) {
         <div class="stat-label">总 IP 数</div>
         <div class="stat-value">${formatNumber(totalIp)}</div>
         <div class="stat-change flat">
-          <span style="color:var(--text-muted);">独立 IP 地址</span>
+          <span style="color:var(--text-muted);">${dateLabel} 数据</span>
         </div>
       </div>
       <div class="stat-card">
@@ -843,7 +869,7 @@ function renderStats(data) {
         <div class="stat-label">新访客</div>
         <div class="stat-value">${formatNumber(totalNew)}</div>
         <div class="stat-change flat">
-          <span style="color:var(--text-muted);">新增用户数</span>
+          <span style="color:var(--text-muted);">${dateLabel} 新增</span>
         </div>
       </div>
       <div class="stat-card">
@@ -879,7 +905,7 @@ function renderStats(data) {
         <div class="stat-value">${formatNumber(t.uv)}</div>
         <div class="stat-change ${c.uvChange >= 0 ? 'up' : 'down'}">
           ${c.uvChange >= 0 ? '↑' : '↓'} ${Math.abs(c.uvChange || 0).toFixed(1)}%
-          <span style="color:var(--text-muted);">较昨日</span>
+          <span style="color:var(--text-muted);">较 ${prevLabel}</span>
         </div>
       </div>
       <div class="stat-card">
@@ -888,7 +914,7 @@ function renderStats(data) {
         <div class="stat-value">${formatNumber(t.pv)}</div>
         <div class="stat-change ${c.pvChange >= 0 ? 'up' : 'down'}">
           ${c.pvChange >= 0 ? '↑' : '↓'} ${Math.abs(c.pvChange || 0).toFixed(1)}%
-          <span style="color:var(--text-muted);">较昨日</span>
+          <span style="color:var(--text-muted);">较 ${prevLabel}</span>
         </div>
       </div>
       <div class="stat-card">
@@ -897,6 +923,7 @@ function renderStats(data) {
         <div class="stat-value">${formatNumber(t.ip)}</div>
         <div class="stat-change ${c.ipChange >= 0 ? 'up' : 'down'}">
           ${c.ipChange >= 0 ? '↑' : '↓'} ${Math.abs(c.ipChange || 0).toFixed(1)}%
+          <span style="color:var(--text-muted);">${dateLabel}</span>
         </div>
       </div>
       <div class="stat-card">
@@ -905,6 +932,7 @@ function renderStats(data) {
         <div class="stat-value">${formatNumber(t.newUser)}</div>
         <div class="stat-change ${c.newUserChange >= 0 ? 'up' : 'down'}">
           ${c.newUserChange >= 0 ? '↑' : '↓'} ${Math.abs(c.newUserChange || 0).toFixed(1)}%
+          <span style="color:var(--text-muted);">${dateLabel}</span>
         </div>
       </div>
       <div class="stat-card">
@@ -1217,7 +1245,7 @@ function renderChart(data) {
           },
           title: {
             display: true,
-            text: '今日 UV 分布',
+            text: 'UV 分布（${latestDate ? formatDate(latestDate) : '最新'}）',
             color: tooltipTitle,
             font: { size: 14, weight: '600' },
             padding: { bottom: 12, top: 4 }
@@ -1571,12 +1599,15 @@ function renderComparison(data) {
   const sites = data.sites || [];
   if (sites.length < 2) return;
   
+  const latestDate = getLatestDate(data);
+  const dateLabel = latestDate ? formatDate(latestDate) : '最新';
+  
   let html = `
     <thead>
       <tr>
         <th>站点</th>
-        <th>今日 UV</th>
-        <th>今日 PV</th>
+        <th>${dateLabel} UV</th>
+        <th>${dateLabel} PV</th>
         <th>UV 变化</th>
         <th>PV 变化</th>
         <th>跳出率</th>
