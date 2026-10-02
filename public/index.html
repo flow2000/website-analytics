@@ -968,6 +968,7 @@ function renderChart(data) {
     (site.history || []).forEach(h => allDates.add(h.date));
   });
   const dates = Array.from(allDates).sort();
+  const latestDate = dates.length > 0 ? dates[dates.length - 1] : null;
   
   const isDark = document.body.dataset.theme === 'dark';
   const textColor = isDark ? '#94a3b8' : '#64748b';
