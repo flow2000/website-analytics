@@ -70,8 +70,9 @@ function overallGrade(bounceLevel, durationLevel, pvPerUv) {
 // ========== 单站点数据构建 ==========
 /**
  * 从原始记录构建站点分析数据
- * 注意：使用昨日（完整一天）的数据作为主展示，对比前天的数据
- *       因为当天数据还在变化中，不适合作为展示基准
+ * 使用 before* 字段（昨日完整数据）进行渲染
+ * 每条记录的 before* = 该采集日的前一天完整数据
+ * 所以最新记录的 before* = 昨天数据，第二条记录的 before* = 前天数据
  * @param {string} siteName - 站点名
  * @param {Array} records - 原始记录数组（按日期升序），每项: { date, data }
  * @returns {object} 站点分析数据
@@ -96,26 +97,16 @@ function buildSiteData(siteName, records) {
   const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
   const n = sorted.length;
 
-  // 取倒数第二天作为"今日"展示数据（完整的一天）
-  // 取倒数第三天作为对比基准（前天）
-  // 如果只有1条数据：用它作为 today，yesterday 同 today
-  // 如果只有2条数据：用第1条作为 yesterday，第2条作为 today
-  let todayRec, yesterdayRec;
-  if (n >= 3) {
-    todayRec = sorted[n - 2];      // 昨天（完整数据）
-    yesterdayRec = sorted[n - 3];  // 前天（对比基准）
-  } else if (n === 2) {
-    todayRec = sorted[1];
-    yesterdayRec = sorted[0];
-  } else {
-    todayRec = sorted[0];
-    yesterdayRec = sorted[0];
-  }
+  // 最新记录的 before* = 昨天完整数据（主展示）
+  // 上一条记录的 before* = 前天数据（对比基准）
+  const todayRec = sorted[n - 1];
+  const yesterdayRec = n >= 2 ? sorted[n - 2] : todayRec;
 
-  const todayDate = todayRec.date;
-  const compareDate = yesterdayRec.date;
+  // 日期从 beforeTime 字段解析
+  const todayDate = parseBeforeTime(todayRec.data);
+  const compareDate = parseBeforeTime(yesterdayRec.data);
 
-  // 今日数据
+  // 今日数据（用 before* 字段）
   const today = buildDayStats(todayRec.data);
   const yesterday = buildDayStats(yesterdayRec.data);
 
@@ -128,7 +119,7 @@ function buildSiteData(siteName, records) {
     newUserChange: change(today.newUser, yesterday.newUser)
   };
 
-  // 累计数据（取展示日的累计值）
+  // 累计数据（取最新记录的累计值）
   const latest = todayRec.data;
   const cumulative = {
     monthUv: num(latest.monthUv),
@@ -173,12 +164,10 @@ function buildSiteData(siteName, records) {
     }
   };
 
-  // 趋势分析（基于历史数据，去掉今天不完整的那条）
-  const historyDays = n >= 3 ? n - 1 : n;  // 去掉最后一条（今天不完整）
-  const trendRecords = sorted.slice(0, historyDays);
-  const uvHistory = trendRecords.map(r => num(r.data.curUv));
-  const pvHistory = trendRecords.map(r => num(r.data.curPv));
-  const svHistory = trendRecords.map(r => num(r.data.curSv));
+  // 趋势分析（基于所有记录的 before* 数据，都是完整的）
+  const uvHistory = sorted.map(r => num(r.data.beforeUv));
+  const pvHistory = sorted.map(r => num(r.data.beforePv));
+  const svHistory = sorted.map(r => num(r.data.beforeSv));
   const avgU = avg(uvHistory);
   const avgP = avg(pvHistory);
 
@@ -190,11 +179,15 @@ function buildSiteData(siteName, records) {
     avgPv: avgP,
     todayUvVsAvg: change(today.uv, avgU),
     todayPvVsAvg: change(today.pv, avgP),
-    daysAnalyzed: historyDays
+    daysAnalyzed: n
   };
 
-  // 历史数据（去掉今天不完整的那条）
-  const history = trendRecords.map(r => buildDayStats(r.data, r.date));
+  // 历史数据（所有记录的 before* 数据）
+  const history = sorted.map(r => {
+    const stats = buildDayStats(r.data);
+    stats.date = parseBeforeTime(r.data) || r.date;
+    return stats;
+  });
 
   return {
     name: siteName,
@@ -216,23 +209,34 @@ function buildSiteData(siteName, records) {
 }
 
 /**
- * 从单天原始数据构建设计化的日数据
+ * 从单天原始数据构建设计化的日数据（使用 before* 字段）
  */
 function buildDayStats(data, date) {
-  const uv = num(data.curUv);
-  const pv = num(data.curPv);
+  const uv = num(data.beforeUv);
+  const pv = num(data.beforePv);
   const result = {
     uv,
     pv,
-    sv: num(data.curSv),
-    ip: num(data.curIp),
-    newUser: num(data.curNewUserCount),
-    bounceRate: pct(data.curBounceRate),
-    avgDuration: Math.round(num(data.curAvgDuration) / 1000),
+    sv: num(data.beforeSv),
+    ip: num(data.beforeIp),
+    newUser: num(data.beforeNewUserCount),
+    bounceRate: pct(data.beforeBounceRate),
+    avgDuration: Math.round(num(data.beforeAvgDuration) / 1000),
     pvPerUv: uv > 0 ? Math.round((pv / uv) * 100) / 100 : 0
   };
   if (date) result.date = date;
   return result;
+}
+
+/**
+ * 从 beforeTime 字段解析日期
+ * 格式: "2021/07/01-2021/07/01" → "2021-07-01"
+ */
+function parseBeforeTime(data) {
+  const bt = data && data.beforeTime;
+  if (!bt) return '';
+  const first = String(bt).split('-')[0];
+  return first.replace(/\//g, '-');
 }
 
 // ========== 汇总/总览数据 ==========
