@@ -192,8 +192,9 @@
   .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
   .stat-label {
     font-size: 12px; color: var(--text-secondary);
-    margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+    margin-bottom: 2px; display: flex; align-items: center; gap: 6px;
   }
+  .stat-date { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
   .stat-value { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
   .stat-change { font-size: 12px; display: flex; align-items: center; gap: 4px; }
   .stat-change.up { color: var(--accent-green); }
@@ -207,6 +208,7 @@
   .icon-uv { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
   .icon-pv { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
   .icon-ip { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); }
+  .icon-sv { background: rgba(14, 165, 233, 0.2); color: #0ea5e9; }
   .icon-duration { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
   .icon-bounce { background: rgba(234, 179, 8, 0.2); color: var(--accent-yellow); }
   .icon-newuser { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
@@ -672,6 +674,41 @@ function formatChange(pct) {
 }
 
 /**
+ * 同时显示绝对变化值和百分比变化
+ * 返回: { abs: '▼84', pct: '-31.81%', class: 'down' }
+ */
+function formatChangeFull(current, previous) {
+  if (current === null || current === undefined || previous === null || previous === undefined) {
+    return { absText: '--', pctText: '--', class: 'flat' };
+  }
+  const diff = current - previous;
+  const pct = previous !== 0 ? (diff / previous) * 100 : 0;
+  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '→';
+  const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+  const absVal = Math.abs(diff);
+  const absStr = absVal >= 100 ? Math.round(absVal) : Math.round(absVal * 100) / 100;
+  return {
+    absText: `${arrow} ${absStr}`,
+    pctText: `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`,
+    class: cls
+  };
+}
+
+/**
+ * 将秒数格式化为 HH:MM:SS 或 MM:SS
+ */
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined) return '--';
+  const s = Math.round(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = n => String(n).padStart(2, '0');
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  return `${pad(m)}:${pad(sec)}`;
+}
+
+/**
  * 将 YYYY-MM-DD 格式化为 M月D日（如 10月5日）
  */
 function formatShortDate(dateStr) {
@@ -776,43 +813,60 @@ function renderStats() {
   const data = STATE.statsData;
 
   if (STATE.currentSite === 'overview') {
-    const overview = data.overview || {};
+    const o = data.overview || {};
+    const dateStr = o.todayDate ? formatShortDate(o.todayDate) : '';
+    const compareLabel = o.compareDate ? `对比${formatShortDate(o.compareDate)}` : '';
+    const y = o.yesterdayIp !== undefined ? o : {};
+
+    const ipChg = formatChangeFull(o.totalIp, y.yesterdayIp);
+    const pvChg = formatChangeFull(o.totalPv, y.yesterdayPv);
+    const uvChg = formatChangeFull(o.totalUv, y.yesterdayUv);
+    const svChg = formatChangeFull(o.totalSv, y.yesterdaySv);
+    const bncChg = formatChangeFull(o.avgBounceRate, y.yesterdayBounceRate);
+    const durChg = formatChangeFull(o.avgDuration, y.yesterdayDuration);
+
     grid.innerHTML = `
       <div class="stat-card">
-        <div class="stat-icon icon-uv">👥</div>
-        <div class="stat-label">总访客 UV</div>
-        <div class="stat-value">${fmt(overview.totalUv)}</div>
-        <div class="stat-change flat">${overview.totalSites || 0} 个站点汇总</div>
+        <div class="stat-icon icon-ip">🌐</div>
+        <div class="stat-label">IP 数</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(o.totalIp)}</div>
+        <div class="stat-change ${ipChg.class}">${ipChg.absText} ${ipChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-pv">👁️</div>
-        <div class="stat-label">总浏览 PV</div>
-        <div class="stat-value">${fmt(overview.totalPv)}</div>
-        <div class="stat-change flat">累计页面浏览</div>
+        <div class="stat-label">浏览量 PV</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(o.totalPv)}</div>
+        <div class="stat-change ${pvChg.class}">${pvChg.absText} ${pvChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon icon-ip">🌐</div>
-        <div class="stat-label">总 IP 数</div>
-        <div class="stat-value">${fmt(overview.totalIp)}</div>
-        <div class="stat-change flat">独立 IP 地址</div>
+        <div class="stat-icon icon-uv">👥</div>
+        <div class="stat-label">访客数 UV</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(o.totalUv)}</div>
+        <div class="stat-change ${uvChg.class}">${uvChg.absText} ${uvChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon icon-newuser">🆕</div>
-        <div class="stat-label">新访客</div>
-        <div class="stat-value">${fmt(overview.totalNew)}</div>
-        <div class="stat-change flat">新增用户数</div>
+        <div class="stat-icon icon-sv">💬</div>
+        <div class="stat-label">会话数</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(o.totalSv)}</div>
+        <div class="stat-change ${svChg.class}">${svChg.absText} ${svChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-bounce">🚪</div>
-        <div class="stat-label">平均跳出率</div>
-        <div class="stat-value">${overview.avgBounceRate ? overview.avgBounceRate.toFixed(1) + '%' : '--'}</div>
-        <div class="stat-change flat">多站平均</div>
+        <div class="stat-label">跳出率</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${o.avgBounceRate ? o.avgBounceRate.toFixed(2) + '%' : '--'}</div>
+        <div class="stat-change ${bncChg.class}">${bncChg.absText} ${bncChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-duration">⏱️</div>
         <div class="stat-label">平均访问时长</div>
-        <div class="stat-value">${overview.avgDuration ? overview.avgDuration.toFixed(0) + 's' : '--'}</div>
-        <div class="stat-change flat">多站平均</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${formatDuration(o.avgDuration)}</div>
+        <div class="stat-change ${durChg.class}">${durChg.absText} ${durChg.pctText} ${compareLabel}</div>
       </div>
     `;
   } else {
@@ -822,50 +876,60 @@ function renderStats() {
       return;
     }
     const t = site.today;
+    const y = site.yesterday || {};
     const c = site.compare || {};
-    const compareLabel = site.compareDate ? `较${formatShortDate(site.compareDate)}` : '较昨日';
+    const dateStr = site.todayDate ? formatShortDate(site.todayDate) : '';
+    const compareLabel = site.compareDate ? `对比${formatShortDate(site.compareDate)}` : '';
 
-    const uvChg = formatChange(c.uvChange);
-    const pvChg = formatChange(c.pvChange);
-    const ipChg = formatChange(c.ipChange);
-    const newChg = formatChange(c.newUserChange);
+    const ipChg = formatChangeFull(t.ip, y.ip);
+    const pvChg = formatChangeFull(t.pv, y.pv);
+    const uvChg = formatChangeFull(t.uv, y.uv);
+    const svChg = formatChangeFull(t.sv, y.sv);
+    const bncChg = formatChangeFull(t.bounceRate, y.bounceRate);
+    const durChg = formatChangeFull(t.avgDuration, y.avgDuration);
 
     grid.innerHTML = `
       <div class="stat-card">
-        <div class="stat-icon icon-uv">👥</div>
-        <div class="stat-label">访客数 UV</div>
-        <div class="stat-value">${fmt(t.uv)}</div>
-        <div class="stat-change ${uvChg.class}">${uvChg.text} ${compareLabel}</div>
+        <div class="stat-icon icon-ip">🌐</div>
+        <div class="stat-label">IP 数</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(t.ip)}</div>
+        <div class="stat-change ${ipChg.class}">${ipChg.absText} ${ipChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-pv">👁️</div>
         <div class="stat-label">浏览量 PV</div>
+        <div class="stat-date">${dateStr}</div>
         <div class="stat-value">${fmt(t.pv)}</div>
-        <div class="stat-change ${pvChg.class}">${pvChg.text} ${compareLabel}</div>
+        <div class="stat-change ${pvChg.class}">${pvChg.absText} ${pvChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon icon-ip">🌐</div>
-        <div class="stat-label">IP 数</div>
-        <div class="stat-value">${fmt(t.ip)}</div>
-        <div class="stat-change ${ipChg.class}">${ipChg.text} ${compareLabel}</div>
+        <div class="stat-icon icon-uv">👥</div>
+        <div class="stat-label">访客数 UV</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(t.uv)}</div>
+        <div class="stat-change ${uvChg.class}">${uvChg.absText} ${uvChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon icon-newuser">🆕</div>
-        <div class="stat-label">新访客</div>
-        <div class="stat-value">${fmt(t.newUser)}</div>
-        <div class="stat-change ${newChg.class}">${newChg.text} ${compareLabel}</div>
+        <div class="stat-icon icon-sv">💬</div>
+        <div class="stat-label">会话数</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${fmt(t.sv)}</div>
+        <div class="stat-change ${svChg.class}">${svChg.absText} ${svChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-bounce">🚪</div>
         <div class="stat-label">跳出率</div>
-        <div class="stat-value">${t.bounceRate ? t.bounceRate.toFixed(1) + '%' : '--'}</div>
-        <div class="stat-change flat">单页跳出比例</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${t.bounceRate ? t.bounceRate.toFixed(2) + '%' : '--'}</div>
+        <div class="stat-change ${bncChg.class}">${bncChg.absText} ${bncChg.pctText} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-duration">⏱️</div>
         <div class="stat-label">平均访问时长</div>
-        <div class="stat-value">${t.avgDuration ? t.avgDuration.toFixed(0) + 's' : '--'}</div>
-        <div class="stat-change flat">人均停留</div>
+        <div class="stat-date">${dateStr}</div>
+        <div class="stat-value">${formatDuration(t.avgDuration)}</div>
+        <div class="stat-change ${durChg.class}">${durChg.absText} ${durChg.pctText} ${compareLabel}</div>
       </div>
     `;
   }

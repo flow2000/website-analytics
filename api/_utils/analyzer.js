@@ -250,6 +250,8 @@ function buildOverviewData(siteDataList, days) {
   const validSites = siteDataList.filter(s => s.today);
 
   let totalUv = 0, totalPv = 0, totalSv = 0, totalIp = 0, totalNew = 0;
+  let yUv = 0, yPv = 0, ySv = 0, yIp = 0, yNew = 0;
+  let yBounce = 0, yDuration = 0;
   let sumBounce = 0, sumDuration = 0, sumPvpu = 0;
 
   for (const s of validSites) {
@@ -261,11 +263,24 @@ function buildOverviewData(siteDataList, days) {
     sumBounce += s.today.bounceRate;
     sumDuration += s.today.avgDuration;
     sumPvpu += s.today.pvPerUv;
+    // 昨日（对比基准）
+    if (s.yesterday) {
+      yUv += s.yesterday.uv;
+      yPv += s.yesterday.pv;
+      ySv += s.yesterday.sv;
+      yIp += s.yesterday.ip;
+      yNew += s.yesterday.newUser;
+      yBounce += s.yesterday.bounceRate;
+      yDuration += s.yesterday.avgDuration;
+    }
   }
 
-  const avgBounce = validSites.length > 0 ? sumBounce / validSites.length : 0;
-  const avgDuration = validSites.length > 0 ? sumDuration / validSites.length : 0;
-  const avgPvpu = validSites.length > 0 ? sumPvpu / validSites.length : 0;
+  const n = validSites.length;
+  const avgBounce = n > 0 ? sumBounce / n : 0;
+  const avgDuration = n > 0 ? sumDuration / n : 0;
+  const avgPvpu = n > 0 ? sumPvpu / n : 0;
+  const yAvgBounce = n > 0 ? yBounce / n : 0;
+  const yAvgDuration = n > 0 ? yDuration / n : 0;
 
   // 最佳和最弱站点（按 UV）
   let bestSite = validSites[0];
@@ -285,6 +300,23 @@ function buildOverviewData(siteDataList, days) {
     avgBounceRate: Math.round(avgBounce * 10) / 10,
     avgDuration: Math.round(avgDuration),
     avgPvPerUv: Math.round(avgPvpu * 100) / 100,
+    // 对比数据
+    yesterdayUv: yUv,
+    yesterdayPv: yPv,
+    yesterdaySv: ySv,
+    yesterdayIp: yIp,
+    yesterdayNew: yNew,
+    yesterdayBounceRate: Math.round(yAvgBounce * 10) / 10,
+    yesterdayDuration: Math.round(yAvgDuration),
+    uvChange: change(totalUv, yUv),
+    pvChange: change(totalPv, yPv),
+    svChange: change(totalSv, ySv),
+    ipChange: change(totalIp, yIp),
+    newChange: change(totalNew, yNew),
+    bounceChange: change(avgBounce, yAvgBounce),
+    durationChange: change(avgDuration, yAvgDuration),
+    compareDate: validSites[0]?.compareDate || '',
+    todayDate: validSites[0]?.todayDate || '',
     reportDays: days,
     bestSite: bestSite?.name || '',
     bestGrade: bestSite?.overallGrade || '',
