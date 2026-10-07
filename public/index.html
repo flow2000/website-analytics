@@ -67,9 +67,7 @@
     z-index: 100;
     backdrop-filter: blur(10px);
   }
-
   .header-left { display: flex; align-items: center; gap: 12px; }
-
   .logo {
     width: 42px; height: 42px;
     background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
@@ -77,7 +75,6 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 22px;
   }
-
   .header-title {
     font-size: 19px; font-weight: 700;
     background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
@@ -85,7 +82,6 @@
     background-clip: text;
   }
   .header-subtitle { font-size: 12px; color: var(--text-muted); }
-
   .header-right { display: flex; align-items: center; gap: 10px; }
 
   .btn {
@@ -100,6 +96,10 @@
     border: 1px solid var(--border-color);
   }
   .btn-secondary:hover { background: var(--border-color); }
+  .btn-primary {
+    background: var(--accent-blue); color: white;
+  }
+  .btn-primary:hover { opacity: 0.9; }
 
   .icon-btn {
     width: 36px; height: 36px; padding: 0;
@@ -113,42 +113,69 @@
   /* Container */
   .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
 
-  /* Report Info Bar */
-  .report-info-bar {
+  /* Info Bar */
+  .info-bar {
     display: flex; align-items: center; gap: 16px;
     margin-bottom: 16px; padding: 10px 16px;
     background: var(--card-bg); border: 1px solid var(--border-color);
     border-radius: 10px; font-size: 13px;
     flex-wrap: wrap;
   }
-  .report-info-indicator {
+  .info-indicator {
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent-green);
     box-shadow: 0 0 8px var(--accent-green);
+    animation: pulse 2s infinite;
   }
-  .report-info-text { color: var(--text-secondary); }
-  .report-info-text strong { color: var(--text-primary); }
-  .report-info-spacer { flex: 1; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .info-text { color: var(--text-secondary); }
+  .info-text strong { color: var(--text-primary); }
+  .info-spacer { flex: 1; }
 
-  /* Site Selector */
-  .site-selector {
+  /* Controls */
+  .controls {
     display: flex; gap: 12px; margin-bottom: 20px;
-    flex-wrap: wrap; align-items: center;
+    flex-wrap: wrap; align-items: center; justify-content: space-between;
   }
   .site-tabs {
     display: flex; gap: 6px;
     background: var(--bg-secondary);
     padding: 4px; border-radius: 10px;
     border: 1px solid var(--border-color);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .site-tabs::-webkit-scrollbar { display: none; }
   .site-tab {
     padding: 8px 16px; border-radius: 8px;
     cursor: pointer; font-size: 14px; font-weight: 500;
     color: var(--text-secondary); transition: all 0.2s;
     border: none; background: transparent;
+    white-space: nowrap; flex-shrink: 0;
   }
   .site-tab:hover { color: var(--text-primary); }
   .site-tab.active { background: var(--accent-blue); color: white; }
+
+  .days-selector {
+    display: flex; gap: 4px;
+    background: var(--bg-secondary);
+    padding: 4px; border-radius: 10px;
+    border: 1px solid var(--border-color);
+  }
+  .days-btn {
+    padding: 6px 14px; font-size: 13px;
+    background: transparent; color: var(--text-secondary);
+    border: none; border-radius: 6px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .days-btn:hover { color: var(--text-primary); }
+  .days-btn.active {
+    background: var(--accent-purple); color: white;
+  }
 
   /* Stats Cards */
   .stats-grid {
@@ -274,21 +301,23 @@
     display: flex; gap: 4px; margin-bottom: 16px;
     border-bottom: 1px solid var(--border-color);
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .ai-tabs::-webkit-scrollbar { display: none; }
   .ai-tab {
     padding: 10px 18px; cursor: pointer;
     font-size: 14px; font-weight: 500;
     color: var(--text-secondary);
     border-bottom: 2px solid transparent;
     margin-bottom: -1px; transition: all 0.2s;
-    white-space: nowrap;
+    white-space: nowrap; flex-shrink: 0;
   }
   .ai-tab:hover { color: var(--text-primary); }
   .ai-tab.active {
     color: var(--accent-blue);
     border-bottom-color: var(--accent-blue);
   }
-
   .ai-panel { display: none; }
   .ai-panel.active { display: block; }
 
@@ -409,7 +438,7 @@
     border-radius: 20px; font-size: 12px; font-weight: 600;
   }
 
-  /* Loading */
+  /* Loading & Error */
   .loading {
     display: flex; align-items: center; justify-content: center;
     padding: 50px; color: var(--text-secondary);
@@ -423,6 +452,10 @@
     margin-right: 12px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box {
+    text-align: center; padding: 40px;
+    color: var(--accent-red);
+  }
 
   /* Footer */
   .footer {
@@ -432,273 +465,55 @@
     margin-top: 30px;
   }
 
-  /* Responsive - Tablet & Mobile */
-
-  /* 平板适配：769px ~ 1024px */
+  /* ===== Responsive ===== */
   @media (max-width: 1024px) {
     .container { padding: 20px; }
     .header { padding: 12px 20px; }
     .chart-row { grid-template-columns: 1fr; }
   }
 
-  /* 大屏手机 / 小平板：481px ~ 768px */
   @media (max-width: 768px) {
     body {
-      /* 安全区域适配全面屏 */
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
     }
-
     .container { padding: 14px; }
-
-    /* Header */
     .header {
       padding: 10px 14px;
       padding-top: calc(10px + env(safe-area-inset-top));
     }
     .logo { width: 36px; height: 36px; font-size: 18px; border-radius: 9px; }
-    .header-left { gap: 10px; }
     .header-title { font-size: 15px; }
     .header-subtitle { display: none; }
-    .header-right { gap: 8px; }
-    .icon-btn { width: 36px; height: 36px; font-size: 16px; }
-
-    /* Report Info Bar */
-    .report-info-bar {
-      padding: 10px 12px;
-      font-size: 12px;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .report-info-spacer { display: none; }
-    .report-info-text:last-child { width: 100%; border-top: 1px solid var(--border-color); padding-top: 8px; }
-
-    /* Site Selector */
-    .site-selector { margin-bottom: 16px; }
-    .site-tabs {
-      gap: 4px;
-      padding: 3px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      max-width: 100%;
-    }
-    .site-tabs::-webkit-scrollbar { display: none; }
-    .site-tab {
-      padding: 7px 12px;
-      font-size: 13px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    /* Stats Cards */
-    .stats-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
-    }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
     .stat-card { padding: 14px; border-radius: 10px; }
     .stat-card:hover { transform: none; }
-    .stat-icon {
-      width: 32px; height: 32px;
-      font-size: 16px;
-      margin-bottom: 8px;
-      border-radius: 7px;
-    }
-    .stat-label { font-size: 11px; margin-bottom: 4px; }
-    .stat-value { font-size: 20px; margin-bottom: 2px; }
-    .stat-change { font-size: 11px; }
-
-    /* Chart Section */
+    .stat-value { font-size: 20px; }
     .chart-section { padding: 14px; margin-bottom: 16px; border-radius: 10px; }
-    .section-header { margin-bottom: 12px; }
-    .section-title { font-size: 15px; }
-    .metric-toggle { gap: 4px; }
-    .metric-btn { padding: 5px 10px; font-size: 11px; }
     .chart-container { height: 220px; }
-
-    /* Quality Indicators */
-    .quality-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-    .quality-item { padding: 12px 8px; border-radius: 8px; }
-    .quality-label { font-size: 11px; margin-bottom: 2px; }
-    .quality-value { font-size: 17px; margin-bottom: 2px; }
-    .quality-level { padding: 1px 8px; font-size: 10px; }
-
-    /* AI Analysis */
+    .quality-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .ai-section { padding: 16px; margin-bottom: 16px; border-radius: 10px; }
-    .ai-header { margin-bottom: 14px; gap: 8px; }
-    .ai-badge { font-size: 11px; padding: 3px 10px; }
-    .ai-summary { padding: 14px; font-size: 13px; line-height: 1.7; margin-bottom: 14px; }
-    .ai-findings {
-      grid-template-columns: 1fr;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .finding-card { padding: 12px; gap: 8px; border-radius: 8px; }
-    .finding-icon { font-size: 20px; }
-    .finding-text { font-size: 12px; line-height: 1.5; }
-
-    .ai-tabs {
-      gap: 0;
-      margin-bottom: 12px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .ai-tabs::-webkit-scrollbar { display: none; }
-    .ai-tab {
-      padding: 10px 14px;
-      font-size: 13px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .rec-item { padding: 12px; gap: 10px; margin-bottom: 8px; border-radius: 8px; }
-    .rec-title { font-size: 13px; margin-bottom: 3px; }
-    .rec-detail { font-size: 12px; line-height: 1.5; }
-    .rec-icon { font-size: 18px; }
-    .rec-priority { font-size: 10px; padding: 1px 6px; margin-left: 6px; }
-
-    .ai-outlook { padding: 12px 14px; gap: 10px; border-radius: 8px; }
-    .outlook-label { font-size: 13px; }
-
-    /* Deep Analysis */
-    .deep-grid {
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .deep-card { padding: 14px; border-radius: 8px; }
-    .deep-card-title { font-size: 12px; margin-bottom: 6px; }
-    .deep-card-content { font-size: 12px; line-height: 1.6; }
-    .action-list li { padding: 8px 0; font-size: 12px; gap: 8px; }
-    .action-phase { font-size: 10px; padding: 1px 6px; }
-    .risk-list li { padding: 6px 0; font-size: 12px; gap: 6px; }
-
-    /* Strategy Section */
-    .strategy-card { padding: 16px; margin-bottom: 12px; border-radius: 10px; }
-    .strategy-header { gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-    .strategy-target { font-size: 16px; }
-    .strategy-type { font-size: 11px; padding: 3px 10px; }
-    .strategy-focus { font-size: 13px; margin-bottom: 12px; }
-    .strategy-actions li { padding: 6px 0; font-size: 12px; gap: 6px; }
-
-    /* Comparison Table */
+    .ai-findings { grid-template-columns: 1fr; gap: 8px; }
     .comparison-table { font-size: 12px; }
-    .comparison-table th, .comparison-table td {
-      padding: 10px 12px;
-      white-space: nowrap;
-    }
-    .comparison-table th { font-size: 11px; }
-    .grade-badge { font-size: 11px; padding: 3px 10px; }
-
-    /* Loading */
-    .loading { padding: 30px; font-size: 14px; }
-    .spinner { width: 32px; height: 32px; border-width: 2px; margin-right: 10px; }
-
-    /* Footer */
+    .comparison-table th, .comparison-table td { padding: 10px 12px; white-space: nowrap; }
     .footer { padding: 20px 14px; font-size: 12px; margin-top: 20px; }
   }
 
-  /* 小屏手机：<= 480px */
   @media (max-width: 480px) {
     .container { padding: 12px; }
-
-    /* Header */
-    .header { padding: 8px 12px; }
-    .logo { width: 32px; height: 32px; font-size: 16px; border-radius: 8px; }
-    .header-title { font-size: 14px; }
-    .icon-btn { width: 34px; height: 34px; font-size: 15px; border-radius: 7px; }
-
-    /* Report Info Bar */
-    .report-info-bar {
-      padding: 8px 10px;
-      font-size: 11px;
-      gap: 8px;
-    }
-
-    /* Site Selector */
-    .site-tab { padding: 6px 10px; font-size: 12px; }
-
-    /* Stats Cards */
-    .stats-grid { gap: 8px; }
-    .stat-card { padding: 12px; border-radius: 9px; }
-    .stat-icon { width: 28px; height: 28px; font-size: 14px; margin-bottom: 6px; }
-    .stat-label { font-size: 10px; }
     .stat-value { font-size: 18px; }
-    .stat-change { font-size: 10px; }
-
-    /* Chart Section */
-    .chart-section { padding: 12px; border-radius: 9px; }
-    .section-title { font-size: 14px; }
-    .section-header { margin-bottom: 10px; }
-    .metric-btn { padding: 4px 8px; font-size: 10px; }
     .chart-container { height: 200px; }
-
-    /* Quality Indicators */
-    .quality-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
-    .quality-item { padding: 10px 6px; border-radius: 7px; }
-    .quality-label { font-size: 10px; }
-    .quality-value { font-size: 15px; }
-    .quality-level { padding: 1px 6px; font-size: 9px; }
-
-    /* AI Analysis */
-    .ai-section { padding: 14px; border-radius: 9px; }
-    .ai-summary { padding: 12px; font-size: 12px; line-height: 1.6; }
-    .finding-card { padding: 10px; gap: 8px; }
-    .finding-icon { font-size: 18px; }
-    .finding-text { font-size: 11px; }
-
-    .ai-tab { padding: 8px 12px; font-size: 12px; }
-
-    .rec-item { padding: 10px; gap: 8px; }
-    .rec-title { font-size: 12px; }
-    .rec-detail { font-size: 11px; }
-
-    .deep-card { padding: 12px; }
-    .deep-card-content { font-size: 11px; line-height: 1.5; }
-
-    /* Strategy */
-    .strategy-card { padding: 14px; }
-    .strategy-target { font-size: 15px; }
-    .strategy-focus { font-size: 12px; }
-
-    /* Comparison Table */
-    .comparison-table { font-size: 11px; }
-    .comparison-table th, .comparison-table td { padding: 8px 10px; }
-
-    /* Loading */
-    .loading { padding: 24px; font-size: 13px; }
-    .spinner { width: 28px; height: 28px; }
-
-    /* Footer */
-    .footer { padding: 16px 12px; font-size: 11px; }
   }
 
-  /* 横屏手机优化 */
-  @media (max-width: 900px) and (orientation: landscape) {
-    .chart-container { height: 180px; }
-    .stats-grid { grid-template-columns: repeat(3, 1fr); }
-  }
-
-  /* 触摸设备优化：移除 hover 效果，使用 active 反馈 */
+  /* Touch optimization */
   @media (hover: none) and (pointer: coarse) {
     .stat-card:hover { transform: none; box-shadow: none; }
     .stat-card:active { transform: scale(0.98); transition: transform 0.1s; }
     .btn:active, .icon-btn:active, .site-tab:active, .metric-btn:active, .ai-tab:active {
       opacity: 0.7;
     }
-    .site-tab:hover { color: var(--text-secondary); }
-    .site-tab.active:hover { color: white; }
-    .icon-btn:hover { background: var(--bg-tertiary); color: var(--text-secondary); }
-    .metric-btn:hover { color: var(--text-secondary); }
-    .metric-btn.active:hover { color: white; }
     .comparison-table tr:hover { background: transparent; }
     .comparison-table tr:active { background: var(--bg-tertiary); }
-    /* 移除点击高亮 */
     * { -webkit-tap-highlight-color: transparent; }
   }
 </style>
@@ -711,7 +526,7 @@
     <div class="logo">📊</div>
     <div>
       <div class="header-title">51.LA 流量趋势分析 · AI 报告</div>
-      <div class="header-subtitle">AI 生成 · 静态部署</div>
+      <div class="header-subtitle">实时数据 · 智能分析</div>
     </div>
   </div>
   <div class="header-right">
@@ -722,22 +537,26 @@
 
 <div class="container">
 
-  <!-- Report Info Bar -->
-  <div class="report-info-bar">
-    <div class="report-info-indicator"></div>
-    <div class="report-info-text" id="reportInfoText">加载中...</div>
-    <div class="report-info-spacer"></div>
-    <div class="report-info-text" id="reportGenTime"></div>
+  <!-- Info Bar -->
+  <div class="info-bar">
+    <div class="info-indicator"></div>
+    <div class="info-text" id="infoText">加载中...</div>
+    <div class="info-spacer"></div>
+    <div class="info-text" id="infoTime"></div>
   </div>
 
-  <!-- Site Selector -->
-  <div class="site-selector">
+  <!-- Controls -->
+  <div class="controls">
     <div class="site-tabs" id="siteTabs">
       <button class="site-tab active" data-site="overview">📊 总览</button>
     </div>
+    <div class="days-selector" id="daysSelector">
+      <button class="days-btn active" data-days="7">最近 7 天</button>
+      <button class="days-btn" data-days="30">最近 30 天</button>
+    </div>
   </div>
 
-  <!-- Stats Overview -->
+  <!-- Stats Grid -->
   <div class="stats-grid" id="statsGrid">
     <div class="loading" style="grid-column: 1/-1;"><div class="spinner"></div> 加载数据中...</div>
   </div>
@@ -805,34 +624,25 @@
 
   <!-- Footer -->
   <div class="footer">
-    <p>51.LA Analytics · AI 报告系统 | 数据由外部 AI 生成 · 静态部署</p>
+    <p>51.LA Analytics · AI 报告系统 | 数据来源：51.la Open API</p>
   </div>
 </div>
 
 <script>
-// ========== 全局错误防护：修复 getRangeAt Selection 报错 ==========
-// 该错误通常由第三方库（如 Chart.js tooltip 交互）或浏览器扩展
-// 在没有文本选区时调用 window.getSelection().getRangeAt(0) 导致
+// ========== 全局错误防护 ==========
 (function () {
-  // 1. 包装 getRangeAt，避免 IndexSizeError 抛出
   const proto = window.Selection && Selection.prototype;
   if (proto && proto.getRangeAt) {
     const originalGetRangeAt = proto.getRangeAt;
     proto.getRangeAt = function (index) {
-      if (index < 0 || index >= this.rangeCount) {
-        // 返回 null 而非抛出错误，调用方应做空值检查
-        return null;
-      }
+      if (index < 0 || index >= this.rangeCount) return null;
       return originalGetRangeAt.call(this, index);
     };
   }
-
-  // 2. 全局捕获未处理的 Selection 相关错误，防止控制台报错
   window.addEventListener('error', function (e) {
     if (e.error && e.error instanceof DOMException &&
         e.error.name === 'IndexSizeError' &&
         e.message && e.message.indexOf('getRangeAt') !== -1) {
-      // 静默忽略 getRangeAt 索引越界错误（通常无害，由库/扩展触发）
       e.preventDefault();
       e.stopPropagation();
       return false;
@@ -842,15 +652,17 @@
 
 // ========== 全局状态 ==========
 const STATE = {
-  reportData: null,
+  statsData: null,
+  analysisData: null,
   currentSite: 'overview',
+  currentDays: 7,
   currentMetric: 'both',
   trendChart: null
 };
 
 // ========== 工具函数 ==========
 const $ = id => document.getElementById(id);
-const fmt = n => n === null || n === undefined || n === '' ? '--' : Number(n).toLocaleString('zh-CN');
+const fmt = n => (n === null || n === undefined || n === '') ? '--' : Number(n).toLocaleString('zh-CN');
 
 function formatChange(pct) {
   if (pct === null || pct === undefined) return { text: '--', class: 'flat' };
@@ -882,103 +694,37 @@ function priorityLabel(p) {
   return { high: '高优先级', medium: '中优先级', low: '低优先级' }[p] || p;
 }
 
-// ========== 数据加载 ==========
-async function loadReportData() {
-  const res = await fetch('data/report.json?_=' + Date.now());
-  if (!res.ok) throw new Error('无法加载 data/report.json (HTTP ' + res.status + ')');
-  const data = await res.json();
-  validateReportData(data);
-  return data;
+// ========== API 数据加载 ==========
+const API_BASE = '/api';
+
+async function fetchJSON(url) {
+  const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now());
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message || '请求失败');
+  return json.data;
 }
 
-/**
- * 校验 report.json 数据完整性
- * 返回警告信息（不致命），致命错误直接抛出
- */
-function validateReportData(data) {
-  const warnings = [];
-
-  if (!data || typeof data !== 'object') {
-    throw new Error('report.json 格式错误：不是有效的 JSON 对象');
-  }
-  if (!data.sites || !Array.isArray(data.sites) || data.sites.length === 0) {
-    throw new Error('report.json 缺少站点数据（sites 数组为空）');
-  }
-
-  // 检查 AI 分析是否存在
-  let hasAI = false;
-  for (const site of data.sites) {
-    if (site.aiReport && (site.aiReport.summary || site.aiReport.keyFindings || site.aiReport.recommendations)) {
-      hasAI = true;
-      break;
-    }
-  }
-  if (data.overallAI && (data.overallAI.executiveSummary || data.overallAI.crossSiteComparison)) {
-    hasAI = true;
-  }
-  data._hasAI = hasAI;
-
-  // 检查数据新鲜度
-  if (data.generatedAt) {
-    const ageHours = (Date.now() - new Date(data.generatedAt).getTime()) / (1000 * 60 * 60);
-    data._ageHours = ageHours;
-  }
-
-  // 检查历史数据天数
-  const minDays = Math.min(...data.sites.map(s => (s.history || []).length));
-  data._minDays = minDays;
-
-  return warnings;
+async function loadStats(days) {
+  return fetchJSON(`${API_BASE}/stats?days=${days}`);
 }
 
-// ========== 报告信息栏 ==========
-function updateReportInfo() {
-  const data = STATE.reportData;
-  const infoEl = $('reportInfoText');
-  const timeEl = $('reportGenTime');
+async function loadAnalysis(days) {
+  return fetchJSON(`${API_BASE}/analysis?days=${days}`);
+}
 
-  const siteCount = data.sites?.length || 0;
-  const dataSource = data.dataSource || data.generator || 'AI 生成';
-
-  // 数据新鲜度提示
-  let freshnessHtml = '';
-  if (data._ageHours !== undefined) {
-    const age = data._ageHours;
-    if (age < 1) {
-      freshnessHtml = '<span style="color: var(--accent-green);">● 数据新鲜</span>';
-    } else if (age < 24) {
-      freshnessHtml = `<span style="color: var(--accent-yellow);">● ${age.toFixed(0)} 小时前更新</span>`;
-    } else {
-      const days = (age / 24).toFixed(1);
-      freshnessHtml = `<span style="color: var(--accent-red);">● ${days} 天前更新</span>`;
-    }
-  }
-
-  // AI 状态
-  let aiStatusHtml = '';
-  if (data._hasAI) {
-    aiStatusHtml = '<span style="color: var(--accent-green);">🤖 AI 分析已就绪</span>';
-  } else {
-    aiStatusHtml = '<span style="color: var(--accent-yellow);">⏳ AI 分析待生成</span>';
-  }
-
-  infoEl.innerHTML = `📄 <strong>AI 分析报告</strong> · ${siteCount} 个站点 · ${dataSource} · ${freshnessHtml} · ${aiStatusHtml}`;
-
-  if (data.generatedAt) {
-    timeEl.innerHTML = `🕐 生成时间：<strong>${new Date(data.generatedAt).toLocaleString('zh-CN')}</strong>`;
-  }
+async function loadSites() {
+  return fetchJSON(`${API_BASE}/sites`);
 }
 
 // ========== 站点标签 ==========
 function initSiteTabs() {
   const tabs = $('siteTabs');
-  const data = STATE.reportData;
-
-  if (!data || !data.sites) return;
+  const sites = STATE.statsData?.sites || [];
 
   tabs.innerHTML = '<button class="site-tab active" data-site="overview">📊 总览</button>';
 
-  for (const site of data.sites) {
+  for (const site of sites) {
     const btn = document.createElement('button');
     btn.className = 'site-tab';
     btn.dataset.site = site.name;
@@ -996,73 +742,69 @@ function initSiteTabs() {
   });
 }
 
+// ========== 信息栏 ==========
+function updateInfoBar() {
+  const data = STATE.statsData;
+  const infoEl = $('infoText');
+  const timeEl = $('infoTime');
+
+  const siteCount = data?.sites?.length || 0;
+  const days = data?.days || STATE.currentDays;
+
+  infoEl.innerHTML = `📄 <strong>${days} 天数据分析</strong> · ${siteCount} 个站点 · 数据来源：51.LA Open API`;
+
+  if (STATE.analysisData?.generatedAt) {
+    timeEl.innerHTML = `🕐 生成时间：<strong>${new Date(STATE.analysisData.generatedAt).toLocaleString('zh-CN')}</strong>`;
+  }
+}
+
 // ========== 渲染：统计卡片 ==========
 function renderStats() {
   const grid = $('statsGrid');
-  const data = STATE.reportData;
+  const data = STATE.statsData;
 
   if (STATE.currentSite === 'overview') {
-    const summary = data.summary || {};
-    const sites = data.sites || [];
-    const validSites = sites.filter(s => s.today);
-
-    let totalUv = 0, totalPv = 0, totalSv = 0, totalIp = 0, totalNew = 0;
-    let avgBounce = 0, avgDuration = 0;
-
-    for (const s of validSites) {
-      totalUv += s.today.uv || 0;
-      totalPv += s.today.pv || 0;
-      totalSv += s.today.sv || 0;
-      totalIp += s.today.ip || 0;
-      totalNew += s.today.newUser || 0;
-      avgBounce += s.today.bounceRate || 0;
-      avgDuration += s.today.avgDuration || 0;
-    }
-    if (validSites.length > 0) {
-      avgBounce /= validSites.length;
-      avgDuration /= validSites.length;
-    }
-
+    const overview = data.overview || {};
     grid.innerHTML = `
       <div class="stat-card">
         <div class="stat-icon icon-uv">👥</div>
         <div class="stat-label">总访客 UV</div>
-        <div class="stat-value">${fmt(totalUv)}</div>
-        <div class="stat-change flat">${summary.totalSites || validSites.length} 个站点</div>
+        <div class="stat-value">${fmt(overview.totalUv)}</div>
+        <div class="stat-change flat">${overview.totalSites || 0} 个站点汇总</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-pv">👁️</div>
         <div class="stat-label">总浏览 PV</div>
-        <div class="stat-value">${fmt(totalPv)}</div>
+        <div class="stat-value">${fmt(overview.totalPv)}</div>
         <div class="stat-change flat">累计页面浏览</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-ip">🌐</div>
         <div class="stat-label">总 IP 数</div>
-        <div class="stat-value">${fmt(totalIp)}</div>
+        <div class="stat-value">${fmt(overview.totalIp)}</div>
         <div class="stat-change flat">独立 IP 地址</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-newuser">🆕</div>
         <div class="stat-label">新访客</div>
-        <div class="stat-value">${fmt(totalNew)}</div>
+        <div class="stat-value">${fmt(overview.totalNew)}</div>
         <div class="stat-change flat">新增用户数</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-bounce">🚪</div>
         <div class="stat-label">平均跳出率</div>
-        <div class="stat-value">${avgBounce ? avgBounce.toFixed(1) + '%' : '--'}</div>
+        <div class="stat-value">${overview.avgBounceRate ? overview.avgBounceRate.toFixed(1) + '%' : '--'}</div>
         <div class="stat-change flat">多站平均</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-duration">⏱️</div>
         <div class="stat-label">平均访问时长</div>
-        <div class="stat-value">${avgDuration ? avgDuration.toFixed(0) + 's' : '--'}</div>
+        <div class="stat-value">${overview.avgDuration ? overview.avgDuration.toFixed(0) + 's' : '--'}</div>
         <div class="stat-change flat">多站平均</div>
       </div>
     `;
   } else {
-    const site = data.sites.find(s => s.name === STATE.currentSite);
+    const site = (data.sites || []).find(s => s.name === STATE.currentSite);
     if (!site || !site.today) {
       grid.innerHTML = '<div class="loading" style="grid-column: 1/-1;">暂无数据</div>';
       return;
@@ -1119,7 +861,7 @@ function renderStats() {
 // ========== 渲染：趋势图 ==========
 function renderChart() {
   const ctx = $('trendChart').getContext('2d');
-  const data = STATE.reportData;
+  const data = STATE.statsData;
   let labels = [], datasets = [];
 
   const colors = {
@@ -1150,7 +892,7 @@ function renderChart() {
       }
     ];
   } else {
-    const site = data.sites.find(s => s.name === STATE.currentSite);
+    const site = (data.sites || []).find(s => s.name === STATE.currentSite);
     const history = site?.history || [];
     labels = history.map(h => h.date.slice(5));
     const uvData = history.map(h => h.uv || 0);
@@ -1222,25 +964,13 @@ function renderChart() {
 // ========== 渲染：质量指标 ==========
 function renderQuality() {
   const grid = $('qualityGrid');
-  const data = STATE.reportData;
+  const data = STATE.statsData;
 
   if (STATE.currentSite === 'overview') {
-    const sites = data.sites || [];
-    const valid = sites.filter(s => s.quality);
-    if (valid.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-muted); padding: 20px;">暂无数据</div>';
-      return;
-    }
-
-    let avgBr = 0, avgDur = 0, avgPvpu = 0;
-    for (const s of valid) {
-      avgBr += s.quality.bounceRate?.value || 0;
-      avgDur += s.quality.avgDuration?.value || 0;
-      avgPvpu += s.quality.pvPerUv?.value || 0;
-    }
-    avgBr /= valid.length;
-    avgDur /= valid.length;
-    avgPvpu /= valid.length;
+    const overview = data.overview || {};
+    const avgBr = overview.avgBounceRate || 0;
+    const avgDur = overview.avgDuration || 0;
+    const avgPvpu = overview.avgPvPerUv || 0;
 
     const brLevel = avgBr < 30 ? '优秀' : avgBr < 50 ? '良好' : avgBr < 70 ? '一般' : '偏高';
     const durLevel = avgDur >= 180 ? '优秀' : avgDur >= 60 ? '良好' : avgDur >= 30 ? '一般' : '偏短';
@@ -1264,7 +994,7 @@ function renderQuality() {
       </div>
     `;
   } else {
-    const site = data.sites.find(s => s.name === STATE.currentSite);
+    const site = (data.sites || []).find(s => s.name === STATE.currentSite);
     const q = site?.quality || {};
     if (!q || !q.bounceRate) {
       grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: var(--text-muted); padding: 20px;">暂无数据</div>';
@@ -1294,7 +1024,12 @@ function renderQuality() {
 // ========== 渲染：AI 分析 ==========
 function renderAI() {
   const container = $('aiContent');
-  const data = STATE.reportData;
+  const data = STATE.analysisData;
+
+  if (!data) {
+    container.innerHTML = '<div class="loading"><div class="spinner"></div> AI 分析加载中...</div>';
+    return;
+  }
 
   if (STATE.currentSite === 'overview') {
     renderOverviewAI(container, data);
@@ -1305,32 +1040,19 @@ function renderAI() {
 
 function renderOverviewAI(container, data) {
   const overall = data.overallAI || {};
-  const hasOverallAI = overall && (overall.executiveSummary || overall.crossSiteComparison || overall.strategicRecommendations);
 
-  // 如果没有总览 AI 分析，显示友好提示
-  if (!hasOverallAI) {
-    const hasAnyAI = data._hasAI;
+  if (!overall.executiveSummary) {
     container.innerHTML = `
-      <div class="ai-summary">
-        📊 总览数据已加载，包含 ${data.sites.length} 个站点的流量统计。
-      </div>
-      <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 20px; text-align: center;">
-        <div style="font-size: 36px; margin-bottom: 12px;">⏳</div>
-        <div style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">总览 AI 分析待生成</div>
-        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
-          数据已就绪，等待 AI 生成分析报告。<br>
-          ${hasAnyAI ? '部分站点已有 AI 分析，点击站点标签查看详情。' : '所有站点的 AI 分析均待生成。'}
-        </div>
-        <div style="margin-top: 14px; padding: 10px 14px; background: var(--card-bg); border-radius: 8px; font-size: 12px; color: var(--text-muted); display: inline-block; text-align: left;">
-          💡 提示：使用 <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">format=report</code> 导出数据交给 AI，生成后推送 report.json 即可
-        </div>
+      <div class="ai-summary">${data.summary ? `${data.summary.totalSites} 个站点，总 UV ${fmt(data.summary.totalUv)}，总 PV ${fmt(data.summary.totalPv)}` : '暂无总览数据'}</div>
+      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        💡 切换到具体站点可查看更详细的 AI 分析
       </div>
     `;
     return;
   }
 
   container.innerHTML = `
-    <div class="ai-summary">${overall.executiveSummary || '暂无总览分析'}</div>
+    <div class="ai-summary">${overall.executiveSummary}</div>
 
     <div class="ai-tabs">
       <div class="ai-tab active" data-tab="comparison">📊 横向对比</div>
@@ -1392,31 +1114,11 @@ function renderStrategyRecommendations(strategies) {
 }
 
 function renderSiteAI(container, data) {
-  const site = data.sites.find(s => s.name === STATE.currentSite);
+  const site = (data.sites || []).find(s => s.name === STATE.currentSite);
   const ai = site?.aiReport;
-  const hasAI = ai && (ai.summary || ai.keyFindings || ai.recommendations);
 
-  if (!hasAI) {
-    const historyDays = (site?.history || []).length;
-    container.innerHTML = `
-      <div class="ai-summary">
-        📊 <strong>${site?.name || '站点'}</strong> 的流量数据已就绪，共 ${historyDays} 天历史记录。
-      </div>
-      <div style="background: var(--bg-tertiary); border-radius: 10px; padding: 24px; text-align: center;">
-        <div style="font-size: 42px; margin-bottom: 14px;">🤖⏳</div>
-        <div style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">AI 分析待生成</div>
-        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.8; max-width: 500px; margin: 0 auto;">
-          流量统计数据已加载，但 AI 分析报告尚未生成。<br>
-          数据采集正常运行，等待 AI 分析生成后推送即可显示。
-        </div>
-        <div style="margin-top: 16px; padding: 12px 16px; background: var(--card-bg); border-radius: 8px; font-size: 12px; color: var(--text-muted); display: inline-block; text-align: left;">
-          <div style="margin-bottom: 6px; font-weight: 600; color: var(--text-secondary);">💡 AI 生成流程：</div>
-          <div>1. 调用导出 API：<code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px; font-size: 11px;">?format=report&days=14</code></div>
-          <div>2. AI 生成分析报告，添加 aiReport 字段</div>
-          <div>3. 推送 report.json 到仓库，自动更新网站</div>
-        </div>
-      </div>
-    `;
+  if (!ai) {
+    container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">暂无 AI 分析报告</div>';
     return;
   }
 
@@ -1511,7 +1213,8 @@ function bindAiTabs(container) {
       container.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
       container.querySelectorAll('.ai-panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
-      $('panel-' + tab.dataset.tab).classList.add('active');
+      const panel = $('panel-' + tab.dataset.tab);
+      if (panel) panel.classList.add('active');
     });
   });
 }
@@ -1519,8 +1222,8 @@ function bindAiTabs(container) {
 // ========== 渲染：对比表 ==========
 function renderComparison() {
   const section = $('comparisonSection');
-  const data = STATE.reportData;
-  const sites = data.sites || [];
+  const data = STATE.statsData;
+  const sites = data?.sites || [];
 
   if (STATE.currentSite !== 'overview' || sites.length < 2) {
     section.style.display = 'none';
@@ -1556,7 +1259,7 @@ function toggleTheme() {
   body.dataset.theme = next;
   $('themeBtn').textContent = next === 'dark' ? '🌙' : '☀️';
   localStorage.setItem('theme', next);
-  if (STATE.reportData) renderChart();
+  if (STATE.statsData) renderChart();
 }
 
 // ========== 主流程 ==========
@@ -1568,22 +1271,55 @@ function renderAll() {
   renderComparison();
 }
 
-async function initAndLoad() {
+async function loadAndRender(days) {
   const grid = $('statsGrid');
   grid.innerHTML = '<div class="loading" style="grid-column: 1/-1;"><div class="spinner"></div> 加载数据中...</div>';
 
   try {
-    STATE.reportData = await loadReportData();
-    updateReportInfo();
+    // 并行加载统计数据和分析数据
+    const [statsData, analysisData] = await Promise.all([
+      loadStats(days),
+      loadAnalysis(days)
+    ]);
+
+    STATE.statsData = statsData;
+    STATE.analysisData = analysisData;
+    STATE.currentDays = days;
+
     initSiteTabs();
     STATE.currentSite = 'overview';
+    updateInfoBar();
     renderAll();
   } catch (e) {
     console.error(e);
+    // 尝试从静态 JSON 加载（备用方案）
+    try {
+      const res = await fetch('data/report.json?_=' + Date.now());
+      if (res.ok) {
+        const reportData = await res.json();
+        STATE.analysisData = reportData;
+        STATE.statsData = {
+          days: reportData.summary?.reportDays || 7,
+          overview: {
+            totalSites: reportData.summary?.totalSites || 0,
+            totalUv: reportData.summary?.totalUv || 0,
+            totalPv: reportData.summary?.totalPv || 0,
+            bestSite: reportData.summary?.bestSite,
+            weakestSite: reportData.summary?.weakestSite
+          },
+          sites: reportData.sites || []
+        };
+        initSiteTabs();
+        updateInfoBar();
+        renderAll();
+        return;
+      }
+    } catch (_) { /* ignore */ }
+
     grid.innerHTML = `<div class="loading" style="grid-column: 1/-1; color: var(--accent-red);">
       ❌ 数据加载失败: ${e.message}<br><br>
       <span style="font-size: 13px; color: var(--text-muted);">
-        请确保 data/report.json 文件存在且格式正确
+        请确保 API 服务正常运行或 data/report.json 文件存在
       </span>
     </div>`;
   }
@@ -1600,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 按钮事件
   $('themeBtn').addEventListener('click', toggleTheme);
-  $('refreshBtn').addEventListener('click', initAndLoad);
+  $('refreshBtn').addEventListener('click', () => loadAndRender(STATE.currentDays));
 
   // 图表指标切换
   document.querySelectorAll('.metric-btn').forEach(btn => {
@@ -1608,12 +1344,23 @@ document.addEventListener('DOMContentLoaded', () => {
       STATE.currentMetric = btn.dataset.metric;
       document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      if (STATE.reportData) renderChart();
+      if (STATE.statsData) renderChart();
+    });
+  });
+
+  // 天数切换
+  document.querySelectorAll('.days-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const days = parseInt(btn.dataset.days, 10);
+      if (days === STATE.currentDays) return;
+      document.querySelectorAll('.days-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadAndRender(days);
     });
   });
 
   // 启动
-  initAndLoad();
+  loadAndRender(7);
 });
 </script>
 </body>

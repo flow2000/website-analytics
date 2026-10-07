@@ -1,6 +1,6 @@
 # 51.LA 流量趋势分析 · AI 报告系统
 
-一个基于 51.la 数据的流量趋势分析网站，支持 AI 分析报告展示，采用静态部署架构。
+基于 51.la 数据的多站点流量趋势分析平台，支持 AI 智能分析报告、动态数据展示、7/30天数据切换。
 
 ## 🏗️ 架构概览
 
@@ -20,63 +20,55 @@
                               │  (数据持久化存储)  │
                               └─────────┬──────────┘
                                         │
-                           GET /api/export?key=xxx
-                           (带密码的数据导出)
+                    ┌───────────────────┼───────────────────┐
+                    │                   │                   │
+          GET /api/sites     GET /api/stats     GET /api/analysis
+          GET /api/export                                        │
+                    │                   │                   │
+                    ▼                   ▼                   ▼
+              ┌─────────────────────────────────────────────────┐
+              │              前端网站 (静态部署)                 │
+              │  · 多站点总览/单站点切换                          │
+              │  · 7天/30天数据切换                              │
+              │  · 流量趋势图表                                  │
+              │  · 质量指标评级                                  │
+              │  · AI 智能分析报告                               │
+              │  · 多站点对比表                                  │
+              └─────────────────────────────────────────────────┘
                                         │
-┌───────────────────────────────────────┼──────────────────┐
-│               外部 AI 系统             │                  │
-│  (读取导出数据 → 生成 AI 分析报告)    │                  │
-└───────────────────────┬───────────────┘                  │
-                        │                                   │
-                  git push report.json                      │
-                        │                                   │
-                        ▼                                   │
-              ┌──────────────────┐                          │
-              │   Git 仓库       │                          │
-              │ public/data/     │                          │
-              │   report.json    │                          │
-              └────────┬─────────┘                          │
-                       │                                    │
-                自动部署到 Netlify/Vercel                   │
-                       │                                    │
-                       ▼                                    │
-              ┌──────────────────┐                          │
-              │  静态网站部署     │                          │
-              │  (纯 HTML+JS)    │                          │
-              └────────┬─────────┘                          │
-                       │                                    │
-              浏览器直接读取 JSON                           │
-                       │                                    │
-                       ▼                                    │
-              ┌──────────────────┐                          │
-              │    用户浏览器     │                          │
-              │  (流量趋势+AI报告)│                          │
-              └──────────────────┘                          │
-                                                           │
-                     Netlify / Vercel 平台                 │
-└──────────────────────────────────────────────────────────┘
+                                        ▼
+                              外部 AI 系统消费
+                        （调用 /api/analysis 或 /api/export）
 ```
 
 ## ✨ 功能特性
 
+### 数据采集
+- 🔄 **每日自动采集** - GitHub Actions 定时触发，每天访问一次 51.la API
+- 💾 **原始数据存储** - 51.la 返回的完整 bean 数据原样保存到 MongoDB
+- 🏢 **多站点支持** - 同一账号下可配置多个站点，独立存储
+
 ### 数据展示
 - 📊 **总览仪表盘** - 多站点数据汇总展示
-- 📈 **流量趋势图** - UV/PV 趋势可视化，支持单指标/双指标切换
+- 📈 **流量趋势图** - UV/PV/SV 趋势可视化，支持单指标/双指标切换
 - 🎯 **流量质量指标** - 跳出率、访问时长、人均页数评级
 - 🏆 **多站点对比表** - 横向对比各站点表现
+- 📅 **7/30天切换** - 支持最近 7 天和最近 30 天数据查看
+- 🌙/☀️ **明暗主题** - 支持深色/浅色模式切换
 
 ### AI 分析报告
-- 🤖 **AI 智能分析** - 外部 AI 生成的深度分析报告
+- 🤖 **AI 智能分析** - 基于规则生成的模拟 AI 分析（可替换为真实 AI）
 - 💡 **优化建议** - 按类型和优先级分类的改进建议
 - 🔍 **深度分析** - 流量规律、用户行为、增长驱动、风险点
 - 🔮 **趋势展望** - 未来趋势预测
 - 📋 **行动计划** - 分阶段的落地执行方案
 - 🎯 **战略建议** - 总览层面的多站点战略规划
 
-### 用户体验
-- 🌙 / ☀️ **明暗主题切换** - 支持深色/浅色模式
-- 📱 **响应式设计** - 适配桌面端和移动端
-- 🔄 **一键刷新** - 重新加载最新报告数据
+### API 接口
+- 🔌 **RESTful API** - 4 个核心接口，支持前端和外部系统调用
+- 🔐 **访问控制** - 导出接口支持密码验证
+- 📤 **多格式导出** - 支持 JSON 和 CSV 格式导出
+- 📄 **分析 JSON 导出** - 提供结构化分析数据，供外部 AI 系统使用
 
 ## 📁 项目结构
 
@@ -84,20 +76,30 @@
 server/
 ├── .github/
 │   └── workflows/
-│       └── collect-51la.yml     # GitHub Actions 采集工作流
+│       └── collect-51la.yml         # GitHub Actions 采集工作流
 ├── api/
 │   ├── _utils/
-│   │   └── handler.js            # Netlify/Vercel 兼容层
-│   └── export.js                 # 数据导出 API（带密码验证）
+│   │   ├── handler.js                # Netlify/Vercel 兼容层
+│   │   ├── mongo.js                  # MongoDB 连接与查询工具
+│   │   ├── analyzer.js               # 数据分析器（统计+AI报告生成）
+│   │   ├── response.js               # 响应工具（统一格式/CORS/Query解析）
+│   │   ├── csv.js                    # CSV 导出工具
+│   │   └── config.js                 # 共享配置（环境变量统一管理）
+│   ├── sites.js                      # 获取站点列表 API
+│   ├── stats.js                      # 获取统计数据 API
+│   ├── analysis.js                   # 获取 AI 分析报告 API
+│   └── export.js                     # 原始数据导出 API（带密码验证）
 ├── public/
 │   ├── data/
-│   │   └── report.json           # AI 生成的报告数据（外部推送）
-│   └── index.html                # 前端页面
+│   │   └── report.json               # 静态报告数据（备用/离线使用）
+│   ├── favicon.png
+│   └── index.html                    # 前端页面
 ├── scripts/
-│   └── collect-data.js           # 51.la 数据采集脚本
-├── package.json                  # 项目依赖
-├── vercel.json                   # Vercel 部署配置
-└── netlify.toml                  # Netlify 部署配置
+│   ├── collect-data.js               # 51.la 数据采集脚本（GitHub Actions 用）
+│   └── analyze-data.js               # 本地数据分析脚本（生成静态 report.json）
+├── package.json                      # 项目依赖
+├── netlify.toml                      # Netlify 部署配置
+└── README.md                         # 本文档
 ```
 
 ## 🚀 快速开始
@@ -114,93 +116,351 @@ server/
 | `MONGODB_URI` | ✅ | MongoDB 连接字符串 | `mongodb+srv://user:pass@cluster0.mongodb.net` |
 | `MONGODB_DB` | ❌ | 数据库名（默认 `website_statistics`） | `website_statistics` |
 | `MONGODB_COL` | ❌ | 集合名（默认 `51.la`） | `51.la` |
-| `EXPORT_KEY` | ✅ | 导出接口访问密码 | `your-secret-key` |
 
-### 2. 触发数据采集
+### 2. 配置部署平台环境变量
+
+#### Netlify / Vercel 环境变量
+
+| 变量 | 必填 | 说明 | 默认值 |
+|------|:----:|------|--------|
+| `MONGODB_URI` | ✅ | MongoDB 连接字符串 | - |
+| `MONGODB_DB` | ❌ | 数据库名 | `website_statistics` |
+| `MONGODB_COL` | ❌ | 集合名 | `51.la` |
+| `EXPORT_KEY` | ❌ | 导出接口访问密码，留空则不启用密码保护 | （空） |
+
+### 3. 触发数据采集
 
 工作流支持两种触发方式：
 
 - **定时触发**：每天 UTC 23:30（北京时间 07:30）自动运行
 - **手动触发**：GitHub 仓库 → Actions → "51.la Data Collector" → Run workflow
 
-### 3. 生成 AI 报告
-
-**推荐使用 `format=report` 格式**，导出的数据已经是 report.json 的结构（含 today/history/quality/compare/summary），AI 只需添加 `aiReport` 和 `overallAI` 字段即可。
-
-```bash
-# 推荐：导出 report 格式（AI 直接用）
-curl "https://your-domain.com/api/export?key=your-password&format=report&days=14" > report-data.json
-
-# 原始 JSON 格式（完整原始数据）
-curl "https://your-domain.com/api/export?key=your-password&days=14"
-
-# CSV 表格格式
-curl "https://your-domain.com/api/export?key=your-password&site=example.com&format=csv"
-```
-
-**AI 工作流程：**
-
-1. 调用 `/api/export?format=report&days=14` 获取结构化数据
-2. AI 分析数据，为每个站点生成 `aiReport` 字段，总览生成 `overallAI` 字段
-3. 将结果保存为 `public/data/report.json`
-4. `git commit && git push`，网站自动更新
-
 ### 4. 部署到 Netlify / Vercel
 
 #### Netlify
 1. 连接 GitHub 仓库
-2. Build command: 留空（纯静态）
-3. Publish directory: `server/public`
-4. Functions directory: `server/api`
-5. 在 Site settings → Environment variables 中配置 `EXPORT_KEY` 和 `MONGODB_URI`
+2. Build command: 留空（纯静态 + Functions）
+3. Publish directory: `public`
+4. Functions directory: `api`
+5. 在 Site settings → Environment variables 中配置环境变量
 
 #### Vercel
 1. 导入 GitHub 仓库
 2. Framework Preset: Other
 3. Root Directory: `server`
-4. 在 Settings → Environment Variables 中配置 `EXPORT_KEY` 和 `MONGODB_URI`
+4. 在 Settings → Environment Variables 中配置环境变量
+
+### 5. 本地开发
+
+```bash
+cd server
+npm install
+
+# 设置环境变量（Windows PowerShell）
+$env:MONGODB_URI="mongodb://localhost:27017"
+
+# 运行采集
+npm run collect
+
+# 本地预览前端（使用任意静态服务器）
+npx serve public
+```
 
 ## 📡 API 文档
 
-### GET /api/export
+所有 API 均返回 JSON 格式，基础路径为 `/api`。
 
-从 MongoDB 导出数据，带访问密码验证。
+### 通用响应格式
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+错误响应：
+
+```json
+{
+  "success": false,
+  "message": "错误描述"
+}
+```
+
+---
+
+### 1. 获取站点列表
+
+**GET** `/api/sites`
+
+获取所有已采集数据的站点列表。
+
+**响应示例：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "total": 2,
+    "sites": [
+      { "name": "example.com" },
+      { "name": "blog.example.com" }
+    ]
+  }
+}
+```
+
+---
+
+### 2. 获取统计数据
+
+**GET** `/api/stats`
+
+获取统计数据，用于前端展示。
 
 **请求参数：**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
-| `key` | string | ✅ | 访问密码（需与环境变量 `EXPORT_KEY` 一致） |
-| `format` | string | ❌ | 导出格式：`json`（默认原始）、`csv`、`report`（推荐给 AI） |
+| `site` | string | ❌ | 站点名，留空或 `all` 返回所有站点总览 |
+| `days` | number | ❌ | 最近 N 天数据，默认 `7` |
+
+**响应示例（总览）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "days": 7,
+    "overview": {
+      "totalSites": 2,
+      "totalUv": 1500,
+      "totalPv": 3200,
+      "totalSv": 1800,
+      "totalIp": 1200,
+      "totalNew": 800,
+      "avgBounceRate": 65.5,
+      "avgDuration": 45,
+      "avgPvPerUv": 2.13,
+      "reportDays": 7,
+      "bestSite": "example.com",
+      "bestGrade": "良好",
+      "weakestSite": "blog.example.com",
+      "weakestGrade": "一般"
+    },
+    "sites": [
+      {
+        "name": "example.com",
+        "today": {
+          "uv": 800,
+          "pv": 1800,
+          "sv": 950,
+          "ip": 650,
+          "newUser": 420,
+          "bounceRate": 55.2,
+          "avgDuration": 65,
+          "pvPerUv": 2.25
+        },
+        "yesterday": { ... },
+        "compare": {
+          "uvChange": 12.5,
+          "pvChange": 8.3,
+          "svChange": 5.1,
+          "ipChange": 10.2,
+          "newUserChange": -3.2
+        },
+        "cumulative": {
+          "monthUv": 24000,
+          "monthPv": 52000,
+          "totalUv": 580000,
+          "totalPv": 1200000,
+          "topUv": 2100,
+          "topPv": 4500,
+          "topUvDate": "2026-09-15",
+          "topPvDate": "2026-09-20"
+        },
+        "quality": {
+          "bounceRate": { "value": 55.2, "level": "良好", "change": -2.1 },
+          "avgDuration": { "value": 65, "level": "良好", "change": 8.5 },
+          "pvPerUv": { "value": 2.25, "level": "良好" }
+        },
+        "trend": {
+          "uvTrend": "上升",
+          "pvTrend": "平稳",
+          "avgUv": 720,
+          "avgPv": 1600,
+          "todayUvVsAvg": 11.1,
+          "todayPvVsAvg": 12.5,
+          "daysAnalyzed": 7
+        },
+        "history": [
+          { "date": "2026-10-01", "uv": 680, "pv": 1500, "sv": 800, "ip": 550, "bounceRate": 58.0, "avgDuration": 60, "newUser": 380, "pvPerUv": 2.21 }
+        ],
+        "overallGrade": "良好"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 3. 获取 AI 分析报告
+
+**GET** `/api/analysis`
+
+获取 AI 分析报告数据（基于规则生成的模拟 AI 分析）。
+该接口返回的数据可直接用于前端展示，也可导出给外部 AI 系统进行深度分析。
+
+**请求参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `site` | string | ❌ | 站点名，留空或 `all` 返回总览分析 |
+| `days` | number | ❌ | 最近 N 天数据，默认 `7` |
+| `key` | string | ❌ | 访问密码（配置了 EXPORT_KEY 时可选验证） |
+
+**响应示例（单站点）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "version": "2.0",
+    "generatedAt": "2026-10-07T08:00:00.000Z",
+    "generator": "51.LA Analytics Engine",
+    "dataSource": "51.LA Open API V6",
+    "days": 7,
+    "site": {
+      "name": "example.com",
+      "today": { ... },
+      "compare": { ... },
+      "quality": { ... },
+      "trend": { ... },
+      "history": [...],
+      "overallGrade": "良好",
+      "aiReport": {
+        "summary": "example.com 今日 UV 800，PV 1800，较昨日增长 12.5%，综合质量评级为「良好」，近期趋势向好。",
+        "keyFindings": [
+          { "icon": "📈", "text": "UV 呈上升趋势，日均 UV 720，今日高于均值 11.1%" },
+          { "icon": "🎯", "text": "跳出率 55.2%，评级：良好" },
+          { "icon": "⏱️", "text": "平均访问时长 65秒，评级：良好" },
+          { "icon": "📄", "text": "人均浏览 2.25 页，评级：良好" }
+        ],
+        "recommendations": [
+          {
+            "type": "success",
+            "title": "跳出率表现良好",
+            "detail": "用户留存能力强，跳出率处于良好水平，可继续保持内容质量并加大推广力度。",
+            "priority": "low"
+          }
+        ],
+        "deepAnalysis": {
+          "trafficPattern": "近期 UV 趋势整体呈「上升」态势，日均 UV 约 720...",
+          "userBehavior": "用户跳出率为 55.2%，处于「良好」水平...",
+          "growthDrivers": "流量增长势头良好，增长可能来源于内容积累效应...",
+          "riskPoints": [
+            "UV 趋势下降，需警惕持续下滑风险"
+          ],
+          "actionPlan": [
+            "优化首页和落地页加载速度、增加热门文章和相关推荐模块",
+            "优化内链结构，提升用户浏览深度",
+            "建立系统化的内容运营体系"
+          ]
+        },
+        "trendOutlook": "未来一段时间流量有望继续保持增长态势，建议乘胜追击..."
+      }
+    }
+  }
+}
+```
+
+**响应示例（总览）：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "version": "2.0",
+    "generatedAt": "2026-10-07T08:00:00.000Z",
+    "generator": "51.LA Analytics Engine",
+    "dataSource": "51.LA Open API V6",
+    "days": 7,
+    "summary": { ... },
+    "sites": [ { "name": "...", "aiReport": { ... } } ],
+    "overallAI": {
+      "executiveSummary": "共 2 个站点，今日总 UV 1500，总 PV 3200...",
+      "crossSiteComparison": {
+        "uvGap": "example.com 领先 blog.example.com 约 60%...",
+        "pvGap": "...",
+        "qualityGap": "...",
+        "conclusion": "..."
+      },
+      "strategicRecommendations": [
+        {
+          "target": "example.com",
+          "strategy": "标杆巩固",
+          "focus": "保持领先优势，探索新增长模式",
+          "actions": [
+            "持续输出高质量内容，巩固流量基本盘",
+            "探索新的流量渠道和增长方式"
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+### 4. 原始数据导出
+
+**GET** `/api/export`
+
+从 MongoDB 导出原始数据，带访问密码验证。
+
+**请求参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:----:|------|
+| `key` | string | ❌ | 访问密码（配置了 `EXPORT_KEY` 时必填） |
+| `format` | string | ❌ | 导出格式：`json`（默认）或 `csv` |
 | `site` | string | ❌ | 指定站点名，留空则导出全部站点 |
 | `days` | number | ❌ | 最近 N 天的数据 |
 | `start` | string | ❌ | 开始日期（YYYY-MM-DD） |
 | `end` | string | ❌ | 结束日期（YYYY-MM-DD） |
 
-**三种导出格式对比：**
-
-| 格式 | 适用场景 | 特点 |
-|------|----------|------|
-| `json` | 程序处理、调试 | 51.la 原始字段（curUv/curPv 等），完整原始数据 |
-| `csv` | Excel 分析 | 表格格式，可直接打开 |
-| `report` | **AI 生成报告** | ✅ 已转换为 report.json 结构，AI 只需添加 aiReport 字段 |
-
 **JSON 响应格式：**
 
 ```json
 {
-  "exportedAt": "2026-09-27T00:00:00.000Z",
+  "exportedAt": "2026-10-07T08:00:00.000Z",
   "source": "51.LA Analytics",
   "totalSites": 2,
-  "totalRecords": 28,
+  "totalRecords": 14,
   "sites": [
     {
       "site": "example.com",
-      "recordCount": 14,
+      "recordCount": 7,
       "records": [
         {
-          "date": "2026-09-20",
-          "data": { "curUv": 120, "curPv": 350, "...": "..." }
+          "date": "2026-10-01",
+          "data": {
+            "curTime": "2026/10/01-2026/10/01",
+            "curUv": 680,
+            "curPv": 1500,
+            "curSv": 800,
+            "curIp": 550,
+            "curBounceRate": 0.58,
+            "curAvgDuration": 60000,
+            "beforeUv": 620,
+            "beforePv": 1400,
+            "monthUv": 21000,
+            "totalUv": 579200,
+            "...": "..."
+          }
         }
       ]
     }
@@ -208,56 +468,9 @@ curl "https://your-domain.com/api/export?key=your-password&site=example.com&form
 }
 ```
 
-**Report 格式响应（推荐给 AI 使用）：**
+**CSV 导出字段：**
 
-直接输出与 `report.json` 一致的结构（不含 AI 分析部分），AI 只需在每个站点添加 `aiReport`、在顶层添加 `overallAI` 即可推送：
-
-```json
-{
-  "version": "1.0",
-  "generatedAt": "2026-09-27T00:00:00.000Z",
-  "generator": "51.LA Analytics Export API",
-  "dataSource": "51.LA Open API V6",
-  "summary": {
-    "totalSites": 2,
-    "totalUv": 2730,
-    "totalPv": 7670,
-    "reportDays": 14,
-    "bestSite": "site1.com",
-    "bestGrade": "良好",
-    "weakestSite": "site2.com",
-    "weakestGrade": "一般"
-  },
-  "sites": [
-    {
-      "name": "site1.com",
-      "overallGrade": "良好",
-      "today": { "uv": 520, "pv": 1280, "ip": 480, "..." : "..." },
-      "compare": { "uvChange": 12.5, "pvChange": 8.3, "..." : "..." },
-      "quality": {
-        "bounceRate": { "value": 45.2, "level": "良好" },
-        "avgDuration": { "value": 125, "level": "一般" },
-        "pvPerUv": { "value": 2.46, "level": "良好" }
-      },
-      "history": [
-        { "date": "2026-09-20", "uv": 480, "pv": 1150, "..." : "..." }
-      ]
-    }
-  ],
-  "overallAI": null
-}
-```
-
-> 💡 **AI 提示词建议**：调用此格式后，告诉 AI "在每个站点对象中添加 aiReport 字段，在顶层添加 overallAI 字段，其他内容保持不变，输出完整的 JSON"，出错率最低。
-
-**错误响应：**
-
-```json
-{
-  "success": false,
-  "message": "访问密码错误"
-}
-```
+`site, date, uv, pv, sv, ip, newUser, bounceRate, avgDurationSec, pvPerUv, beforeUv, beforePv, beforeSv, beforeIp, monthUv, monthPv, totalUv, totalPv`
 
 **状态码：**
 
@@ -268,186 +481,123 @@ curl "https://your-domain.com/api/export?key=your-password&site=example.com&form
 | 405 | 方法不允许 |
 | 500 | 服务器错误 |
 
-## 📄 report.json 数据格式
+---
 
-AI 生成的报告文件需遵循以下结构：
+## 🔄 数据流说明
 
-```json
+### 数据采集流程
+
+1. **触发**：GitHub Actions 每天定时触发（或手动触发）
+2. **采集**：`scripts/collect-data.js` 调用 51.la API 获取各站点数据
+3. **存储**：原始 bean 数据原样存入 MongoDB，按 `site + date` 复合唯一键 upsert
+4. **完成**：每个站点每天一条记录
+
+### 前端数据加载流程
+
+1. 页面加载时，并行调用 `/api/stats` 和 `/api/analysis`
+2. `stats` 接口返回统计数据（用于卡片、图表、质量指标）
+3. `analysis` 接口返回 AI 分析报告（用于 AI 分析区域）
+4. 用户切换站点/天数时，重新调用对应接口
+5. 若 API 不可用，自动降级到 `data/report.json` 静态文件
+
+### 外部 AI 分析流程
+
+1. 外部系统调用 `/api/analysis?key=密码&days=30` 获取结构化分析数据
+2. 或调用 `/api/export?key=密码&days=30&format=json` 获取原始数据
+3. 外部 AI 系统基于数据生成深度分析报告
+4. （可选）将生成的报告推送到 `public/data/report.json` 供前端离线使用
+
+## 📊 数据模型
+
+### MongoDB 文档结构
+
+```javascript
 {
-  "version": "1.0",
-  "generatedAt": "2026-09-27T21:30:00.000Z",
-  "generator": "AI Engine Name",
-  "dataSource": "51.LA Open API V6",
-  "summary": {
-    "totalSites": 2,
-    "totalUv": 2730,
-    "totalPv": 7670,
-    "reportDays": 7,
-    "bestSite": "site1.com",
-    "bestGrade": "良好",
-    "weakestSite": "site2.com",
-    "weakestGrade": "一般"
-  },
-  "sites": [
-    {
-      "name": "site1.com",
-      "overallGrade": "良好",
-      "today": {
-        "uv": 520,
-        "pv": 1280,
-        "sv": 650,
-        "ip": 480,
-        "newUser": 85,
-        "bounceRate": 45.2,
-        "avgDuration": 125,
-        "pvPerUv": 2.46
-      },
-      "compare": {
-        "uvChange": 12.5,
-        "pvChange": 8.3,
-        "ipChange": 5.1,
-        "newUserChange": -3.2
-      },
-      "quality": {
-        "bounceRate": { "value": 45.2, "level": "良好" },
-        "avgDuration": { "value": 125, "level": "一般" },
-        "pvPerUv": { "value": 2.46, "level": "良好" }
-      },
-      "history": [
-        { "date": "2026-09-21", "uv": 480, "pv": 1150 }
-      ],
-      "aiReport": {
-        "summary": "AI 分析摘要...",
-        "keyFindings": [
-          { "icon": "📈", "text": "关键发现描述..." }
-        ],
-        "recommendations": [
-          {
-            "type": "info",
-            "title": "建议标题",
-            "detail": "建议详情...",
-            "priority": "high"
-          }
-        ],
-        "deepAnalysis": {
-          "trafficPattern": "流量规律分析...",
-          "userBehavior": "用户行为分析...",
-          "growthDrivers": "增长驱动因素...",
-          "riskPoints": ["风险点1", "风险点2"],
-          "actionPlan": ["短期行动", "中期行动", "长期行动"]
-        },
-        "trendOutlook": "趋势展望..."
-      }
-    }
-  ],
-  "overallAI": {
-    "executiveSummary": "总览摘要...",
-    "crossSiteComparison": {
-      "uvGap": "UV 差距描述...",
-      "pvGap": "PV 差距描述...",
-      "qualityGap": "质量差距描述...",
-      "conclusion": "对比结论..."
-    },
-    "strategicRecommendations": [
-      {
-        "target": "目标站点",
-        "strategy": "策略类型",
-        "focus": "重点方向",
-        "actions": ["行动1", "行动2"]
-      }
-    ]
+  _id: ObjectId,
+  site: "example.com",           // 站点名称
+  date: "2026-10-07",            // 日期（YYYY-MM-DD）
+  updatedAt: ISODate,            // 更新时间
+  data: {                        // 51.la 返回的原始 bean 数据
+    curTime: "2026/10/07-2026/10/07",
+    curUv: 800,
+    curPv: 1800,
+    curSv: 950,
+    curIp: 650,
+    curNewUserCount: 420,
+    curBounceRate: 0.552,
+    curAvgDuration: 65000,
+    beforeUv: 711,
+    beforePv: 1662,
+    // ... 更多 51.la 原始字段
   }
 }
 ```
 
-### 字段说明
+**索引：** `{ site: 1, date: 1 }` 复合唯一索引
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `version` | string | 报告版本号 |
-| `generatedAt` | string | 生成时间（ISO 格式） |
-| `generator` | string | 生成器名称 |
-| `dataSource` | string | 数据来源 |
-| `summary` | object | 总览摘要 |
-| `sites` | array | 各站点数据 |
-| `sites[].today` | object | 今日数据 |
-| `sites[].compare` | object | 较昨日变化（百分比） |
-| `sites[].quality` | object | 质量指标及评级 |
-| `sites[].history` | array | 历史数据数组 |
-| `sites[].aiReport` | object | 单站点 AI 报告 |
-| `overallAI` | object | 总览 AI 分析 |
+### 51.la API 完整字段
 
-**推荐类型（type）：**
-- `success` - 亮点/优势
-- `info` - 一般建议
-- `warning` - 需要关注
-- `alert` - 紧急问题
+51.la overview 接口返回的 bean 包含以下字段：
 
-**优先级（priority）：**
-- `high` - 高优先级
-- `medium` - 中优先级
-- `low` - 低优先级
-
-**质量等级（level）：**
-- `优秀`
-- `良好`
-- `一般`
-- `偏高` / `偏短` / `待优化`
-
-## 🔧 本地开发
-
-### 环境要求
-- Node.js 18+
-- MongoDB（本地或远程）
-
-### 本地运行采集脚本
-
-```bash
-cd server
-npm install
-
-# 设置环境变量（Windows PowerShell）
-$env:ACCESS_KEY="your-key"
-$env:SECRET_KEY="your-secret"
-$env:MONGODB_URI="mongodb://localhost:27017"
-
-# 运行采集
-npm run collect
-```
-
-### 本地预览前端
-
-```bash
-# 使用任意静态服务器，例如：
-npx serve public
-# 或
-python -m http.server 8080 --directory public
-```
-
-然后访问 `http://localhost:8080`
-
-## 📝 工作流说明
-
-### 数据采集工作流
-
-工作流文件：`.github/workflows/collect-51la.yml`
-
-**触发条件：**
-- 定时：`cron: '30 23 * * *'`（每天 UTC 23:30）
-- 手动：`workflow_dispatch`
-
-**执行步骤：**
-1. Checkout 代码
-2. 设置 Node.js 20
-3. 安装 `mongodb` 依赖
-4. 运行 `scripts/collect-data.js`
-5. 采集失败时标记 workflow 失败
-
-### 部署工作流
-
-由 Netlify / Vercel 自动处理：
-- 推送 `main` 分支 → 自动部署前端 + API
-- 推送新的 `report.json` → 自动更新网站内容
+| 分类 | 字段 | 类型 | 说明 |
+|------|------|------|------|
+| **今日** | curTime | string | 今日时间 |
+| | curUv | int | 今日访客数 UV |
+| | curNewUserCount | int | 今日新访客数 |
+| | curSv | int | 今日会话数 |
+| | curPv | int | 今日浏览量 PV |
+| | curIp | int | 今日 IP 数 |
+| | curBounceRate | float | 今日跳出率 |
+| | curAvgDuration | float | 今日平均访问时长（毫秒） |
+| **昨日** | beforeTime | string | 昨日时间 |
+| | beforeUv | int | 昨日访客数 UV |
+| | beforeNewUserCount | int | 昨日新访客数 |
+| | beforeSv | int | 昨日会话数 |
+| | beforePv | int | 昨日浏览量 PV |
+| | beforeIp | int | 昨日 IP 数 |
+| | beforeBounceRate | float | 昨日跳出率 |
+| | beforeAvgDuration | float | 昨日平均访问时长（毫秒） |
+| **预测** | predictTime | string | 预计日期 |
+| | predictUv | int | 预计访客数 UV |
+| | predictNewUserCount | int | 预计新访客数 |
+| | predictSv | int | 预计会话数 |
+| | predictPv | int | 预计浏览量 PV |
+| | predictIp | int | 预计 IP 数 |
+| **昨日此时** | yesterdayCurUv | int | 昨日此时访客数 UV |
+| | yesterdayCurNewUserCount | int | 昨日此时新访客数 |
+| | yesterdayCurSv | int | 昨日此时会话数 |
+| | yesterdayCurPv | int | 昨日此时浏览量 PV |
+| | yesterdayCurIp | int | 昨日此时 IP 数 |
+| | yesterdayCurBounceRate | float | 昨日此时跳出率 |
+| | yesterdayCurAvgDuration | float | 昨日此时平均访问时长（毫秒） |
+| **历史最高** | topUv | int | 历史最高访客数 UV |
+| | topTimeUv | string | 历史最高 UV 日期 |
+| | topNewUserCount | int | 历史最高新访客数 |
+| | topTimeNewUserCount | string | 历史最高新访客数日期 |
+| | topSv | int | 历史最高会话数 |
+| | topTimeSv | string | 历史最高会话数日期 |
+| | topPv | int | 历史最高浏览量 PV |
+| | topTimePv | string | 历史最高 PV 日期 |
+| | topIp | int | 历史最高 IP 数 |
+| | topTimeIp | string | 历史最高 IP 数日期 |
+| | topBounceRate | float | 历史最高跳出率 |
+| | topTimeBounceRate | string | 历史最高跳出率日期 |
+| | topAvgDuration | float | 历史最高平均访问时长（毫秒） |
+| | topTimeAvgDuration | string | 历史最高平均访问时长日期 |
+| **本月** | monthUv | int | 月访客数 UV |
+| | monthNewUserCount | int | 月新访客数 |
+| | monthSv | int | 月会话数 |
+| | monthPv | int | 月浏览量 PV |
+| | monthIp | int | 月 IP 数 |
+| | monthBounceRate | float | 月跳出率 |
+| | monthAvgDuration | float | 月平均访问时长（毫秒） |
+| **累计** | totalUv | int | 总访客数 UV |
+| | totalNewUserCount | int | 总新访客数 |
+| | totalSv | int | 总会话数 |
+| | totalPv | int | 总浏览量 PV |
+| | totalIp | int | 总 IP 数 |
+| | totalBounceRate | float | 总跳出率 |
+| | totalAvgDuration | float | 总平均访问时长（毫秒） |
 
 ## ⚙️ 环境变量
 
@@ -466,57 +616,52 @@ python -m http.server 8080 --directory public
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `EXPORT_KEY` | 导出接口访问密码 | `admin123` |
 | `MONGODB_URI` | MongoDB 连接字符串 | - |
 | `MONGODB_DB` | 数据库名 | `website_statistics` |
 | `MONGODB_COL` | 集合名 | `51.la` |
-
-## 🔍 常见问题
-
-### Q: 网站运行几天后就没有 AI 分析了？
-
-**现象：** 前几天正常，之后 AI 分析区域显示"AI 分析待生成"。
-
-**原因分析（按概率排序）：**
-
-1. **AI 生成流程中断** - 外部 AI 没有定时调用导出 API 并推送 report.json
-   - ✅ 解决：确保 AI 脚本/工作流每天定时运行
-   - ✅ 使用 `format=report` 格式，降低 AI 生成 JSON 的出错率
-
-2. **GitHub Actions 采集失败** - 数据采集失败导致 MongoDB 没有新数据
-   - ✅ 检查：GitHub → Actions → "51.la Data Collector" 查看运行状态
-   - ✅ 采集脚本自带 3 次重试机制，失败时 workflow 会标红
-   - ✅ 常见原因：51.la 密钥过期、MongoDB 连接问题、网络波动
-
-3. **AI 生成的 JSON 格式错误** - AI 输出的 JSON 不符合规范
-   - ✅ 使用 `format=report` 格式，AI 只需添加 `aiReport` 字段，出错率最低
-   - ✅ 提示词建议："在每个站点对象中添加 aiReport 字段，在顶层添加 overallAI 字段，其他内容保持不变，输出完整的 JSON，不要省略字段"
-
-4. **report.json 没有推送到正确路径**
-   - ✅ 确保文件路径是 `public/data/report.json`
-   - ✅ 确保推送到 `main` 分支
-
-### Q: 数据日期不对（差一天）？
-
-**原因：** 时区问题。51.la 按北京时间统计数据，但代码用了 UTC 日期。
-
-**解决：** 采集脚本已修复为使用北京时间存储日期。确保你使用的是最新版本的 `scripts/collect-data.js`。
-
-### Q: 导出 API 报错 500？
-
-**常见原因：**
-- MongoDB 连接失败（检查 `MONGODB_URI` 环境变量）
-- 集合不存在（首次采集后自动创建）
-- 密码错误（返回 403，不是 500）
-
-**调试：** 在 Vercel/Netlify 的函数日志中查看详细错误信息。
+| `EXPORT_KEY` | 导出接口访问密码，留空则不启用密码保护 | （空） |
 
 ## 🔐 安全建议
 
-1. **修改默认密码** - 部署时务必修改 `EXPORT_KEY`，不要使用默认值
+1. **设置导出密码** - 建议配置 `EXPORT_KEY` 环境变量以保护导出接口，未设置时接口无密码保护
 2. **HTTPS** - 确保部署平台启用 HTTPS，防止密码明文传输
 3. **密钥管理** - 所有敏感信息都通过环境变量/Secrets 管理，不要硬编码
 4. **定期轮换** - 定期更换 51.la 密钥和导出密码
+5. **访问控制** - `/api/export` 和带 key 的 `/api/analysis` 接口应妥善保管密码
+
+## 🤝 与外部 AI 系统集成
+
+本系统提供两种方式供外部 AI 系统使用：
+
+### 方式一：使用分析数据（推荐）
+
+调用 `/api/analysis` 接口，获取已结构化的分析数据，直接用于 AI 分析。
+
+```bash
+# 获取最近 30 天的分析数据
+curl "https://your-domain.com/api/analysis?key=your-password&days=30"
+```
+
+优点：
+- 数据已结构化，AI 可直接使用
+- 包含质量评级、趋势判断、关键发现等预处理结果
+- 数据量适中，减少 AI token 消耗
+
+### 方式二：使用原始数据
+
+调用 `/api/export` 接口，获取 51.la 原始数据。
+
+```bash
+# 获取最近 30 天的原始数据（JSON）
+curl "https://your-domain.com/api/export?key=your-password&days=30&format=json"
+
+# 获取指定站点的 CSV 数据
+curl "https://your-domain.com/api/export?key=your-password&site=example.com&format=csv"
+```
+
+优点：
+- 数据最完整，包含所有 51.la 字段
+- 适合需要深度自定义分析的场景
 
 ## 📜 License
 

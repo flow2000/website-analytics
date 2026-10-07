@@ -2,6 +2,22 @@
   functions = "api"
   publish = "public"
 
+# API 路由重写
+[[redirects]]
+  from = "/api/sites"
+  to = "/.netlify/functions/sites"
+  status = 200
+
+[[redirects]]
+  from = "/api/stats"
+  to = "/.netlify/functions/stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/analysis"
+  to = "/.netlify/functions/analysis"
+  status = 200
+
 [[redirects]]
   from = "/api/export"
   to = "/.netlify/functions/export"
