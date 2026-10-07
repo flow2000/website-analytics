@@ -671,6 +671,18 @@ function formatChange(pct) {
   return { text: '→ 0%', class: 'flat' };
 }
 
+/**
+ * 将 YYYY-MM-DD 格式化为 M月D日（如 10月5日）
+ */
+function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  return `${month}月${day}日`;
+}
+
 function getLevelClass(level) {
   switch (level) {
     case '优秀': return 'level-excellent';
@@ -811,6 +823,7 @@ function renderStats() {
     }
     const t = site.today;
     const c = site.compare || {};
+    const compareLabel = site.compareDate ? `较${formatShortDate(site.compareDate)}` : '较昨日';
 
     const uvChg = formatChange(c.uvChange);
     const pvChg = formatChange(c.pvChange);
@@ -822,25 +835,25 @@ function renderStats() {
         <div class="stat-icon icon-uv">👥</div>
         <div class="stat-label">访客数 UV</div>
         <div class="stat-value">${fmt(t.uv)}</div>
-        <div class="stat-change ${uvChg.class}">${uvChg.text} 较昨日</div>
+        <div class="stat-change ${uvChg.class}">${uvChg.text} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-pv">👁️</div>
         <div class="stat-label">浏览量 PV</div>
         <div class="stat-value">${fmt(t.pv)}</div>
-        <div class="stat-change ${pvChg.class}">${pvChg.text} 较昨日</div>
+        <div class="stat-change ${pvChg.class}">${pvChg.text} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-ip">🌐</div>
         <div class="stat-label">IP 数</div>
         <div class="stat-value">${fmt(t.ip)}</div>
-        <div class="stat-change ${ipChg.class}">${ipChg.text} 较昨日</div>
+        <div class="stat-change ${ipChg.class}">${ipChg.text} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-newuser">🆕</div>
         <div class="stat-label">新访客</div>
         <div class="stat-value">${fmt(t.newUser)}</div>
-        <div class="stat-change ${newChg.class}">${newChg.text} 较昨日</div>
+        <div class="stat-change ${newChg.class}">${newChg.text} ${compareLabel}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon icon-bounce">🚪</div>
