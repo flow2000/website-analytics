@@ -70,6 +70,8 @@ function overallGrade(bounceLevel, durationLevel, pvPerUv) {
 // ========== 单站点数据构建 ==========
 /**
  * 从原始记录构建站点分析数据
+ * 注意：使用昨日（完整一天）的数据作为主展示，对比前天的数据
+ *       因为当天数据还在变化中，不适合作为展示基准
  * @param {string} siteName - 站点名
  * @param {Array} records - 原始记录数组（按日期升序），每项: { date, data }
  * @returns {object} 站点分析数据
@@ -79,7 +81,9 @@ function buildSiteData(siteName, records) {
     return {
       name: siteName,
       today: null,
+      todayDate: '',
       yesterday: null,
+      compareDate: '',
       compare: null,
       cumulative: null,
       quality: null,
@@ -90,8 +94,26 @@ function buildSiteData(siteName, records) {
   }
 
   const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
-  const todayRec = sorted[sorted.length - 1];
-  const yesterdayRec = sorted.length >= 2 ? sorted[sorted.length - 2] : todayRec;
+  const n = sorted.length;
+
+  // 取倒数第二天作为"今日"展示数据（完整的一天）
+  // 取倒数第三天作为对比基准（前天）
+  // 如果只有1条数据：用它作为 today，yesterday 同 today
+  // 如果只有2条数据：用第1条作为 yesterday，第2条作为 today
+  let todayRec, yesterdayRec;
+  if (n >= 3) {
+    todayRec = sorted[n - 2];      // 昨天（完整数据）
+    yesterdayRec = sorted[n - 3];  // 前天（对比基准）
+  } else if (n === 2) {
+    todayRec = sorted[1];
+    yesterdayRec = sorted[0];
+  } else {
+    todayRec = sorted[0];
+    yesterdayRec = sorted[0];
+  }
+
+  const todayDate = todayRec.date;
+  const compareDate = yesterdayRec.date;
 
   // 今日数据
   const today = buildDayStats(todayRec.data);
@@ -106,19 +128,21 @@ function buildSiteData(siteName, records) {
     newUserChange: change(today.newUser, yesterday.newUser)
   };
 
-  // 累计数据（取最新一天的累计值）
+  // 累计数据（取展示日的累计值）
   const latest = todayRec.data;
   const cumulative = {
     monthUv: num(latest.monthUv),
     monthPv: num(latest.monthPv),
     monthSv: num(latest.monthSv),
     monthIp: num(latest.monthIp),
+    monthNewUserCount: num(latest.monthNewUserCount),
     monthBounceRate: pct(latest.monthBounceRate),
     monthAvgDuration: Math.round(num(latest.monthAvgDuration) / 1000),
     totalUv: num(latest.totalUv),
     totalPv: num(latest.totalPv),
     totalSv: num(latest.totalSv),
     totalIp: num(latest.totalIp),
+    totalNewUserCount: num(latest.totalNewUserCount),
     totalBounceRate: pct(latest.totalBounceRate),
     totalAvgDuration: Math.round(num(latest.totalAvgDuration) / 1000),
     topUv: num(latest.topUv),
@@ -149,10 +173,12 @@ function buildSiteData(siteName, records) {
     }
   };
 
-  // 趋势分析
-  const uvHistory = sorted.map(r => num(r.data.curUv));
-  const pvHistory = sorted.map(r => num(r.data.curPv));
-  const svHistory = sorted.map(r => num(r.data.curSv));
+  // 趋势分析（基于历史数据，去掉今天不完整的那条）
+  const historyDays = n >= 3 ? n - 1 : n;  // 去掉最后一条（今天不完整）
+  const trendRecords = sorted.slice(0, historyDays);
+  const uvHistory = trendRecords.map(r => num(r.data.curUv));
+  const pvHistory = trendRecords.map(r => num(r.data.curPv));
+  const svHistory = trendRecords.map(r => num(r.data.curSv));
   const avgU = avg(uvHistory);
   const avgP = avg(pvHistory);
 
@@ -164,16 +190,18 @@ function buildSiteData(siteName, records) {
     avgPv: avgP,
     todayUvVsAvg: change(today.uv, avgU),
     todayPvVsAvg: change(today.pv, avgP),
-    daysAnalyzed: sorted.length
+    daysAnalyzed: historyDays
   };
 
-  // 历史数据
-  const history = sorted.map(r => buildDayStats(r.data, r.date));
+  // 历史数据（去掉今天不完整的那条）
+  const history = trendRecords.map(r => buildDayStats(r.data, r.date));
 
   return {
     name: siteName,
     today,
+    todayDate,
     yesterday,
+    compareDate,
     compare,
     cumulative,
     quality,
@@ -268,9 +296,10 @@ function buildOverviewData(siteDataList, days) {
  * @returns {object} AI 报告
  */
 function generateSiteAIReport(siteData) {
-  const { today, compare, quality, trend, cumulative } = siteData;
+  const { today, compare, quality, trend, cumulative, compareDate } = siteData;
   if (!today) return null;
 
+  const compareLabel = formatCompareLabel(compareDate);
   const keyFindings = [];
   const recommendations = [];
 
@@ -383,28 +412,28 @@ function generateSiteAIReport(siteData) {
       recommendations.push({
         type: 'info',
         title: '流量大幅增长',
-        detail: `今日 UV 较昨日增长 ${compare.uvChange.toFixed(1)}%，请关注增长来源并分析是否有推广活动或异常流量，把握增长机会。`,
+        detail: `今日 UV ${compareLabel}增长 ${compare.uvChange.toFixed(1)}%，请关注增长来源并分析是否有推广活动或异常流量，把握增长机会。`,
         priority: 'medium'
       });
     } else if (compare.uvChange > 5) {
       recommendations.push({
         type: 'info',
         title: '流量稳步增长',
-        detail: `今日 UV 较昨日增长 ${compare.uvChange.toFixed(1)}%，呈稳步上升态势，建议持续观察增长趋势并复盘增长原因。`,
+        detail: `今日 UV ${compareLabel}增长 ${compare.uvChange.toFixed(1)}%，呈稳步上升态势，建议持续观察增长趋势并复盘增长原因。`,
         priority: 'low'
       });
     } else if (compare.uvChange < -20) {
       recommendations.push({
         type: 'alert',
         title: '流量大幅下降',
-        detail: `今日 UV 较昨日下降 ${Math.abs(compare.uvChange).toFixed(1)}%，建议检查服务器状态、推广渠道和搜索引擎排名，及时排查原因。`,
+        detail: `今日 UV ${compareLabel}下降 ${Math.abs(compare.uvChange).toFixed(1)}%，建议检查服务器状态、推广渠道和搜索引擎排名，及时排查原因。`,
         priority: 'high'
       });
     } else if (compare.uvChange < -5) {
       recommendations.push({
         type: 'warning',
         title: '流量有所下滑',
-        detail: `今日 UV 较昨日下降 ${Math.abs(compare.uvChange).toFixed(1)}%，需关注流量变化趋势，排查是否有内容更新或渠道波动因素。`,
+        detail: `今日 UV ${compareLabel}下降 ${Math.abs(compare.uvChange).toFixed(1)}%，需关注流量变化趋势，排查是否有内容更新或渠道波动因素。`,
         priority: 'medium'
       });
     }
@@ -432,15 +461,28 @@ function generateSiteAIReport(siteData) {
 }
 
 function generateAISummary(siteData) {
-  const { name, today, compare, overallGrade, trend } = siteData;
+  const { name, today, compare, overallGrade, trend, compareDate } = siteData;
+  const compareLabel = formatCompareLabel(compareDate);
   const parts = [];
   parts.push(`${name} 今日 UV ${today.uv.toLocaleString()}，PV ${today.pv.toLocaleString()}`);
   if (compare.uvChange !== null) {
-    parts.push(`较昨日${compare.uvChange >= 0 ? '增长' : '下降'} ${Math.abs(compare.uvChange).toFixed(1)}%`);
+    parts.push(`${compareLabel}${compare.uvChange >= 0 ? '增长' : '下降'} ${Math.abs(compare.uvChange).toFixed(1)}%`);
   }
   parts.push(`综合质量评级为「${overallGrade}」`);
   parts.push(`近期趋势${trend.uvTrend === '上升' ? '向好' : trend.uvTrend === '下降' ? '承压' : '平稳'}`);
   return parts.join('，') + '。';
+}
+
+/**
+ * 格式化对比日期标签（YYYY-MM-DD → 较M月D日）
+ */
+function formatCompareLabel(dateStr) {
+  if (!dateStr) return '较昨日';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return '较昨日';
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  return `较${month}月${day}日`;
 }
 
 function generateTrafficPatternAnalysis(trend, today) {
