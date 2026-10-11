@@ -520,11 +520,10 @@ npx serve public
       "plan": "hobby",
       "period": "2026-10-01 ~ 2026-10-11",
       "metrics": [
-        { "key": "bandwidth", "label": "带宽（外发）", "used": 27685208412, "usedDisplay": "25.78 GB", "included": 107374182400, "includedDisplay": "100 GB", "percent": 25.8, "kind": "bytes" },
-        { "key": "requests", "label": "请求数", "used": 497616, "usedDisplay": "497,616", "included": null, "includedDisplay": null, "percent": null, "kind": "count" },
-        { "key": "functionInvocations", "label": "函数调用数", "used": 157433, "usedDisplay": "157,433", "included": null, "includedDisplay": null, "percent": null, "kind": "count" },
-        { "key": "functionExecution", "label": "函数执行", "used": 10.81, "usedDisplay": "10.81 GB-hrs", "included": null, "includedDisplay": null, "percent": null, "kind": "gbhours" },
-        { "key": "builds", "label": "构建次数", "used": 241, "usedDisplay": "241", "included": null, "includedDisplay": null, "percent": null, "kind": "count" },
+        { "key": "bandwidth", "label": "数据传输（外发）", "used": 27685208412, "usedDisplay": "25.78 GB", "included": 107374182400, "includedDisplay": "100 GB", "percent": 25.8, "kind": "bytes" },
+        { "key": "requests", "label": "CDN 请求数", "used": 497616, "usedDisplay": "497,616", "included": 1000000, "includedDisplay": "1,000,000", "percent": 49.8, "kind": "count" },
+        { "key": "functionInvocations", "label": "函数调用数", "used": 157433, "usedDisplay": "157,433", "included": 1000000, "includedDisplay": "1,000,000", "percent": 15.7, "kind": "count" },
+        { "key": "functionExecution", "label": "函数执行时长", "used": 10.81, "usedDisplay": "10.81 GB-hrs", "included": 100, "includedDisplay": "100 GB-hrs", "percent": 10.8, "kind": "gbhours" },
         { "key": "buildTime", "label": "构建时长", "used": 219, "usedDisplay": "219 分钟", "included": null, "includedDisplay": null, "percent": null, "kind": "minutes" }
       ]
     },
@@ -558,7 +557,7 @@ npx serve public
 | `period` | 账期范围（Vercel 为当前自然月，Netlify 取计费周期） |
 | `metrics[].percent` | 使用百分比（有额度上限时返回），前端按 ≥70% 黄色、≥90% 红色预警 |
 
-**Vercel 指标来源：** `GET /v2/usage?type=requests|builds&from=&to=`（当前自然月），汇总各周期条目得到总量；带宽额度上限来自内置套餐表（Hobby 100 GB / Pro 1 TB），其余指标 API 不返回上限、仅展示用量。**Netlify 指标来源：** `GET /api/v1/accounts` 的 `capabilities`，`included` 即额度上限。
+**Vercel 指标来源：** `GET /v2/usage?type=requests|builds&from=&to=`（当前自然月），汇总各周期条目得到总量，共 9 项指标（数据传输外发/入站、CDN 请求数、函数调用数、函数执行时长、监控数据点、构建次数、构建时长、构建排队时长）；额度上限取自官方套餐页（Hobby：100 GB 传输 / 1M CDN 请求 / 1M 函数调用 / 100 GB-hrs 执行，Pro：1 TB 传输），API 未提供的官方仪表盘指标（Fast Origin Transfer、Fluid CPU、Deployment/Functions Storage 等）暂不支持。**Netlify 指标来源：** `GET /api/v1/accounts` 的 `capabilities`，`included` 即额度上限，共 11 项消耗型额度。
 
 ---
 
