@@ -1,7 +1,7 @@
 /**
- * 平台额度使用情况
- * Vercel:  GET /v2/user + /v2/usage（需 VERCEL_TOKEN，可选 VERCEL_TEAM_ID）
- * Netlify: GET /api/v1/accounts（需 NETLIFY_TOKEN，可选 NETLIFY_ACCOUNT_SLUG）
+ * 平台额度使用情况（基于 2026-10 实测 API 结构）
+ * Vercel:  GET /v2/user、/v2/teams/{id}、/v2/usage?type=requests|builds&from=&to=（需 VERCEL_TOKEN）
+ * Netlify: GET /api/v1/accounts（需 NETLIFY_TOKEN）
  *
  * 返回统一结构，未配置 Token 的平台返回 configured: false，前端据此渲染提示。
  */
@@ -10,36 +10,39 @@ const config = require('./config');
 
 const FETCH_TIMEOUT = 8000;
 
-// Vercel 用量指标：key -> 展示名（未列出的指标使用原 key）
-const VERCEL_METRIC_LABELS = {
-  bandwidth: '带宽',
-  fastDataTransfer: '快速数据传输',
-  fastOriginDataTransfer: '源站数据传输',
-  buildMinutes: '构建时长',
-  builds: '构建次数',
-  serverlessFunctionExecution: 'Serverless 执行',
-  functionInvocations: '函数调用数',
-  edgeFunctionExecutionUnits: 'Edge 函数执行',
-  edgeFunctionInvocations: 'Edge 函数调用数',
-  edgeMiddlewareInvocations: 'Edge Middleware 调用',
-  edgeRequests: 'Edge 请求数',
-  imageOptimization: '图片优化',
-  imageOptimizer: '图片优化',
-  roasts: 'Robots.txt 请求'
+// Vercel 已知套餐的额度上限（API 不返回上限，仅用于计算使用百分比；未知套餐不显示百分比）
+const VERCEL_PLAN_LIMITS = {
+  hobby: { bandwidth: 100 * 1024 * 1024 * 1024 }, // 100 GB
+  pro: { bandwidth: 1024 * 1024 * 1024 * 1024 }   // 1 TB
 };
 
-// Netlify 额度项：key -> 展示名
-const NETLIFY_CAPABILITY_LABELS = {
-  sites: '站点数',
-  collaborators: '协作者数',
-  bandwidth: '带宽',
-  build_minutes: '构建时长',
-  functions_invocations: '函数调用数',
-  members: '成员数'
-};
+// Vercel 用量指标（type=requests / builds 响应字段汇总）
+// [输出 key, 展示名, 源字段列表(累加), 单位类型, 数值缩放(默认 1；秒→分钟为 1/60)]
+const VERCEL_METRICS = [
+  ['bandwidth', '带宽（外发）', ['bandwidth_outgoing_bytes'], 'bytes', 1],
+  ['requests', '请求数', ['request_hit_count', 'request_miss_count'], 'count', 1],
+  ['functionInvocations', '函数调用数', ['function_invocation_successful_count', 'function_invocation_error_count', 'function_invocation_throttle_count', 'function_invocation_timeout_count'], 'count', 1],
+  ['functionExecution', '函数执行', ['function_execution_successful_gb_hours', 'function_execution_error_gb_hours', 'function_execution_timeout_gb_hours'], 'gbhours', 1],
+  ['builds', '构建次数', ['build_completed_count'], 'count', 1],
+  ['buildTime', '构建时长', ['build_build_seconds'], 'minutes', 1 / 60]
+];
+
+// Netlify 额度项白名单（GET /api/v1/accounts 的 capabilities 字段，仅保留消耗型额度）
+// [capability key, 展示名, 单位类型]
+const NETLIFY_CAPABILITIES = [
+  ['sites', '站点数', 'count'],
+  ['domains', '域名数', 'count'],
+  ['bandwidth', '带宽', 'bytes'],
+  ['build_minutes', '构建时长', 'minutes'],
+  ['edge_functions', 'Edge 函数调用', 'count'],
+  ['functions', '函数调用数', 'count'],
+  ['functions_gb_hour', '函数执行', 'gbhours'],
+  ['builds_gb_hour', '构建执行', 'gbhours'],
+  ['form_submissions', '表单提交', 'count']
+];
 
 /**
- * 带超时的 fetch JSON
+ * 带超时的请求 JSON
  * 优先使用原生 fetch（Node 18+），旧版本回退到 https 模块
  */
 async function fetchJSON(url, options = {}) {
@@ -65,10 +68,6 @@ function fetchWithTimeout(url, options = {}) {
 function httpsGet(url, options = {}) {
   const https = require('https');
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      req.destroy(new Error('请求超时'));
-    }, FETCH_TIMEOUT);
-
     const req = https.request(url, { method: 'GET', headers: options.headers || {} }, (res) => {
       let data = '';
       res.setEncoding('utf8');
@@ -78,6 +77,9 @@ function httpsGet(url, options = {}) {
         resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, text: async () => data });
       });
     });
+    const timer = setTimeout(() => {
+      req.destroy(new Error('请求超时'));
+    }, FETCH_TIMEOUT);
     req.on('error', (e) => {
       clearTimeout(timer);
       reject(e);
@@ -87,7 +89,7 @@ function httpsGet(url, options = {}) {
 }
 
 /**
- * 从指标对象中按候选字段顺序取第一个有限数字
+ * 从对象中按候选字段顺序取第一个有限数字
  */
 function pickNumber(obj, keys) {
   if (!obj || typeof obj !== 'object') return null;
@@ -95,6 +97,23 @@ function pickNumber(obj, keys) {
     if (typeof obj[k] === 'number' && isFinite(obj[k])) return obj[k];
   }
   return null;
+}
+
+/**
+ * 汇总 data 数组中指定字段的数值（Vercel /v2/usage 的 data 为分周期条目）
+ */
+function sumFields(dataList, fields) {
+  let total = null;
+  for (const d of dataList || []) {
+    if (!d || typeof d !== 'object') continue;
+    for (const f of fields) {
+      const v = d[f];
+      if (typeof v === 'number' && isFinite(v)) {
+        total = (total || 0) + v;
+      }
+    }
+  }
+  return total;
 }
 
 /**
@@ -106,13 +125,13 @@ function bytesToGB(n) {
 
 /**
  * 格式化用量展示文本
- * kind: 'bytes' | 'count' | 'minutes' | 'seconds'
+ * kind: 'bytes' | 'count' | 'minutes' | 'gbhours'
  */
 function formatUsage(value, kind) {
   if (value === null || value === undefined) return null;
   if (kind === 'bytes') return `${bytesToGB(value)} GB`;
   if (kind === 'minutes') return `${Math.round(value)} 分钟`;
-  if (kind === 'seconds') return `${Math.round(value / 3600)} 小时`;
+  if (kind === 'gbhours') return `${Math.round(value * 100) / 100} GB-hrs`;
   return Number(value).toLocaleString('zh-CN');
 }
 
@@ -135,7 +154,7 @@ function buildMetric(key, label, used, included, kind) {
 }
 
 /**
- * 格式化账期展示（接受 { start, end }，值为毫秒时间戳或 ISO 字符串）
+ * 格式化账期展示（值为毫秒时间戳或日期字符串）
  */
 function formatPeriod(period) {
   if (!period || typeof period !== 'object') return null;
@@ -150,7 +169,7 @@ function formatPeriod(period) {
     }
     return null;
   };
-  const start = fmtOne(period.start ?? period.from ?? period.begin);
+  const start = fmtOne(period.start ?? period.from);
   const end = fmtOne(period.end ?? period.to);
   if (!start && !end) return null;
   return `${start || '?'} ~ ${end || '?'}`;
@@ -168,50 +187,58 @@ async function getVercelUsage() {
   }
 
   const headers = { Authorization: `Bearer ${token}` };
-  const teamId = config.vercelTeamId;
-  const teamQuery = teamId ? `?teamId=${encodeURIComponent(teamId)}` : '';
 
   try {
-    // 账号信息：团队用 /v2/teams/{id}，个人用 /v2/user
-    let account = null;
+    // 1) 用户信息（username + 默认团队 ID）
+    let account = 'Vercel 账号';
+    let teamId = config.vercelTeamId;
+    try {
+      const me = await fetchJSON('https://api.vercel.com/v2/user', { headers });
+      const u = me?.user || me || {};
+      if (u.username) account = u.username;
+      if (!teamId && u.defaultTeamId) teamId = u.defaultTeamId;
+    } catch (_) { /* 用户信息失败不阻断用量查询 */ }
+
+    // 2) 团队信息（团队名 + 套餐）
     let plan = null;
     if (teamId) {
       try {
         const team = await fetchJSON(`https://api.vercel.com/v2/teams/${encodeURIComponent(teamId)}`, { headers });
-        account = team?.name || team?.slug || teamId;
-        plan = team?.billing?.plan || null;
-      } catch (_) {
-        account = teamId;
-      }
-    } else {
-      try {
-        const me = await fetchJSON('https://api.vercel.com/v2/user', { headers });
-        const u = me?.user || me || {};
-        account = u.username || u.name || u.email || 'Vercel 账号';
-      } catch (_) {
-        account = 'Vercel 账号';
-      }
+        if (team?.name) account = team.name;
+        if (team?.billing?.plan) plan = team.billing.plan;
+      } catch (_) { /* 团队信息失败不阻断用量查询 */ }
     }
 
-    // 用量：优先无参数调用（返回完整账期），失败则按当前自然月重试
-    let usage;
-    try {
-      usage = await fetchJSON(`https://api.vercel.com/v2/usage${teamQuery}`, { headers });
-    } catch (e) {
-      const now = new Date();
-      const from = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      usage = await fetchJSON(`https://api.vercel.com/v2/usage${teamQuery ? teamQuery + '&' : '?'}from=${from}&to=${now.getTime()}`, { headers });
-    }
+    // 3) 用量查询（当前自然月），type=requests 与 type=builds 并行
+    const now = new Date();
+    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const scope = teamId ? `&teamId=${encodeURIComponent(teamId)}` : '';
+    const base = `https://api.vercel.com/v2/usage?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(now.toISOString())}${scope}`;
 
-    const metrics = normalizeVercelUsage(usage);
-    const period = formatPeriod(usage?.period);
+    const [requests, builds] = await Promise.all([
+      fetchJSON(`${base}&type=requests`, { headers }).catch(() => null),
+      fetchJSON(`${base}&type=builds`, { headers }).catch(() => null)
+    ]);
+    const requestData = Array.isArray(requests?.data) ? requests.data : [];
+    const buildData = Array.isArray(builds?.data) ? builds.data : [];
+
+    // 4) 汇总指标
+    const limits = VERCEL_PLAN_LIMITS[plan] || {};
+    const metrics = [];
+    for (const [key, label, fields, kind, scale] of VERCEL_METRICS) {
+      const sum = sumFields([...requestData, ...buildData], fields);
+      if (sum === null) continue;
+      const used = scale === 1 ? sum : sum * scale;
+      const metric = buildMetric(key, label, used, limits[key] ?? null, kind);
+      if (metric) metrics.push(metric);
+    }
 
     return {
       configured: true,
       ok: true,
       account,
       plan,
-      period,
+      period: `${from.toISOString().slice(0, 10)} ~ ${now.toISOString().slice(0, 10)}`,
       metrics
     };
   } catch (e) {
@@ -225,63 +252,6 @@ async function getVercelUsage() {
       metrics: []
     };
   }
-}
-
-/**
- * 归一化 Vercel /v2/usage 响应
- * 兼容 v2（顶层指标对象）与旧版（days 日汇总）两种形态
- */
-function normalizeVercelUsage(usage) {
-  if (!usage || typeof usage !== 'object') return [];
-
-  const result = [];
-  const seen = new Set();
-
-  // 1) 顶层指标对象（v2 形态）：如 bandwidth: { base, threshold, ... }
-  for (const [key, raw] of Object.entries(usage)) {
-    if (['ts', 'period', 'days', 'day', 'dayV2', 'budget'].includes(key)) continue;
-    if (!raw || typeof raw !== 'object') continue;
-
-    const kind = /bandwidth|DataTransfer/i.test(key) ? 'bytes'
-      : /minutes/i.test(key) ? 'minutes'
-      : /Execution(?!Units)/i.test(key) ? 'seconds'
-      : 'count';
-
-    const used = pickNumber(raw, ['current', 'base', 'used', 'total', 'value']);
-    const included = pickNumber(raw, ['threshold', 'included', 'limit', 'volume', 'max']);
-    const metric = buildMetric(key, VERCEL_METRIC_LABELS[key] || key, used, included, kind);
-    if (metric) {
-      result.push(metric);
-      seen.add(key);
-    }
-  }
-
-  // 2) 日汇总形态（days/dayV2/day: { date: { metric: number|object } }）
-  for (const dayKey of ['days', 'dayV2', 'day']) {
-    const days = usage[dayKey];
-    if (!days || typeof days !== 'object') continue;
-    for (const [key, raw] of Object.entries(days)) {
-      if (seen.has(key) || /^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
-      const kind = /bandwidth|DataTransfer/i.test(key) ? 'bytes'
-        : /minutes/i.test(key) ? 'minutes'
-        : 'count';
-      const used = sumDailyValue(raw);
-      if (used === null) continue;
-      const metric = buildMetric(key, VERCEL_METRIC_LABELS[key] || key, used, null, kind);
-      if (metric) {
-        result.push(metric);
-        seen.add(key);
-      }
-    }
-  }
-
-  return result;
-}
-
-function sumDailyValue(raw) {
-  if (typeof raw === 'number' && isFinite(raw)) return raw;
-  if (raw && typeof raw === 'object') return pickNumber(raw, ['current', 'base', 'used', 'total', 'value']);
-  return null;
 }
 
 // ===================== Netlify =====================
@@ -310,12 +280,13 @@ async function getNetlifyUsage() {
 
     const caps = account?.capabilities || {};
     const metrics = [];
-    for (const [key, raw] of Object.entries(caps)) {
+    for (const [key, label, kind] of NETLIFY_CAPABILITIES) {
+      const raw = caps[key];
       if (!raw || typeof raw !== 'object') continue;
-      const used = pickNumber(raw, ['used', 'current', 'total']);
-      const included = pickNumber(raw, ['included', 'limit', 'max']);
+      const used = pickNumber(raw, ['used']);
+      const included = pickNumber(raw, ['included', 'max']);
       if (used === null && included === null) continue;
-      const metric = buildMetric(key, NETLIFY_CAPABILITY_LABELS[key] || key, used, included, 'count');
+      const metric = buildMetric(key, label, used, included, kind);
       if (metric) metrics.push(metric);
     }
 
@@ -324,7 +295,10 @@ async function getNetlifyUsage() {
       ok: true,
       account: account?.name || account?.slug || 'Netlify 团队',
       plan: account?.type_name || account?.type || null,
-      period: formatPeriod(account?.billing_period || null),
+      period: formatPeriod({
+        start: account?.current_billing_period_start,
+        end: account?.next_billing_period_start
+      }),
       metrics
     };
   } catch (e) {

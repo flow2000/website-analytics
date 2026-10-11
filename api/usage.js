@@ -21,7 +21,7 @@ const handler = wrapHandler(async (event) => {
     fetchedAt: new Date().toISOString(),
     vercel,
     netlify
-  }, { cache: 'no-cache' });
+  }, { cache: 'no-store' });
 });
 
 module.exports = handler;
