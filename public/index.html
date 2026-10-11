@@ -470,6 +470,11 @@
     background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);
   }
   .usage-period { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .usage-zero-hint {
+    font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;
+    padding: 8px 10px; border-radius: 8px;
+    background: var(--bg-tertiary); border: 1px dashed var(--border-color);
+  }
   .usage-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; }
   .usage-item { margin-bottom: 0; }
   .usage-item-head {
@@ -907,7 +912,8 @@ function renderUsageCard(platform, cnName, logoClass, logoText) {
   }
   const metrics = u.metrics || [];
   const body = metrics.length
-    ? `<div class="usage-metrics">${metrics.map(usageBarItem).join('')}</div>`
+    ? (u.allZero ? '<div class="usage-zero-hint">📭 当前账期暂无用量记录，以下为套餐包含额度</div>' : '') +
+      `<div class="usage-metrics">${metrics.map(usageBarItem).join('')}</div>`
     : '<div class="usage-hint">暂无额度数据</div>';
   return `
     <div class="usage-card">

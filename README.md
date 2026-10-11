@@ -557,7 +557,7 @@ npx serve public
 | `period` | 账期范围（Vercel 为当前自然月，Netlify 取计费周期） |
 | `metrics[].percent` | 使用百分比（有额度上限时返回），前端按 ≥70% 黄色、≥90% 红色预警 |
 
-**Vercel 指标来源：** `GET /v2/usage?type=requests|builds&from=&to=`（当前自然月），汇总各周期条目得到总量，共 9 项指标（数据传输外发/入站、CDN 请求数、函数调用数、函数执行时长、监控数据点、构建次数、构建时长、构建排队时长）；额度上限取自官方套餐页（Hobby：100 GB 传输 / 1M CDN 请求 / 1M 函数调用 / 100 GB-hrs 执行，Pro：1 TB 传输），API 未提供的官方仪表盘指标（Fast Origin Transfer、Fluid CPU、Deployment/Functions Storage 等）暂不支持。**Netlify 指标来源：** `GET /api/v1/accounts` 的 `capabilities`，`included` 即额度上限，共 11 项消耗型额度。
+**Vercel 指标来源：** `GET /v2/usage?type=requests|builds&from=&to=`（当前自然月），汇总各周期条目得到总量，共 9 项指标（数据传输外发/入站、CDN 请求数、函数调用数、函数执行时长、监控数据点、构建次数、构建时长、构建排队时长）；另接入 edge/artifacts/storage_*/cron_jobs/data_cache 等类型（有数据自动展示）与资源计数（项目数 / 域名数 / 本月部署数，来自 /v9/projects、/v5/domains、/v6/deployments，部署数满页时显示 100+）。额度上限取自官方套餐页（Hobby：100 GB 传输 / 1M CDN 请求 / 1M 函数调用 / 100 GB-hrs 执行，Pro：1 TB 传输），API 未提供的官方仪表盘指标（Fast Origin Transfer、Fluid CPU、Deployment/Functions Storage 等）暂不支持。**Netlify 指标来源：** `GET /api/v1/accounts` 的 `capabilities`，`included` 即额度上限，共 11 项消耗型额度；当前账期全部零用量时返回 `allZero: true`，前端显示「暂无用量记录」提示。
 
 ---
 

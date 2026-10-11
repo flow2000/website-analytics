@@ -53,6 +53,46 @@ const NETLIFY_CAPABILITIES = [
   ['identity_active_logins', 'Identity 活跃登录', 'count']
 ];
 
+// Vercel 额外接入的用量类型（当前账户无数据时自动隐藏，有数据即展示）
+const VERCEL_EXTRA_TYPES = ['edge', 'artifacts', 'storage_postgres', 'storage_redis', 'storage_blob', 'cron_jobs', 'data_cache'];
+
+// 通用提取时跳过的元数据字段
+const VERCEL_SKIP_FIELDS = new Set(['date', 'first_event', 'last_event', 'breakdown', 'previous', 'timestamp']);
+
+// Vercel 用量字段的友好名称（未命中的字段走通用转换）
+const VERCEL_FIELD_LABELS = {
+  request_hit_count: 'CDN 命中数',
+  request_miss_count: 'CDN 未命中数',
+  bandwidth_outgoing_bytes: '外发流量',
+  bandwidth_incoming_bytes: '入站流量',
+  monitoring_metric_count: '监控数据点',
+  function_invocation_successful_count: '函数调用成功',
+  function_invocation_error_count: '函数调用失败',
+  function_invocation_throttle_count: '函数调用限流',
+  function_invocation_timeout_count: '函数调用超时',
+  function_execution_successful_gb_hours: '函数执行成功',
+  function_execution_error_gb_hours: '函数执行失败',
+  function_execution_timeout_gb_hours: '函数执行超时',
+  build_completed_count: '构建完成数',
+  build_failed_count: '构建失败数',
+  build_build_seconds: '构建时长',
+  build_queued_seconds: '构建排队时长'
+};
+
+// 根据字段名推断单位类型与数值缩放
+function inferFieldKind(field) {
+  if (field.includes('gb_hours')) return { kind: 'gbhours', scale: 1 };
+  if (field.includes('bytes')) return { kind: 'bytes', scale: 1 };
+  if (field.endsWith('_ms')) return { kind: 'minutes', scale: 1 / 60000 };
+  if (field.endsWith('_seconds')) return { kind: 'minutes', scale: 1 / 60 };
+  return { kind: 'count', scale: 1 };
+}
+
+// snake_case 字段名转友好展示名
+function prettifyFieldName(field) {
+  return field.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
 /**
  * 带超时的请求 JSON
  * 优先使用原生 fetch（Node 18+），旧版本回退到 https 模块
@@ -221,20 +261,24 @@ async function getVercelUsage() {
       } catch (_) { /* 团队信息失败不阻断用量查询 */ }
     }
 
-    // 3) 用量查询（当前自然月），type=requests 与 type=builds 并行
+    // 3) 用量查询（当前自然月）：requests/builds 为主 + 额外类型通用接入，全部并行
     const now = new Date();
     const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const scope = teamId ? `&teamId=${encodeURIComponent(teamId)}` : '';
     const base = `https://api.vercel.com/v2/usage?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(now.toISOString())}${scope}`;
 
-    const [requests, builds] = await Promise.all([
-      fetchJSON(`${base}&type=requests`, { headers }).catch(() => null),
-      fetchJSON(`${base}&type=builds`, { headers }).catch(() => null)
-    ]);
-    const requestData = Array.isArray(requests?.data) ? requests.data : [];
-    const buildData = Array.isArray(builds?.data) ? builds.data : [];
+    const allTypes = ['requests', 'builds', ...VERCEL_EXTRA_TYPES];
+    const usageResults = await Promise.all(
+      allTypes.map(t => fetchJSON(`${base}&type=${t}`, { headers }).catch(() => null))
+    );
+    const dataByType = {};
+    allTypes.forEach((t, i) => {
+      dataByType[t] = Array.isArray(usageResults[i]?.data) ? usageResults[i].data : [];
+    });
+    const requestData = dataByType.requests;
+    const buildData = dataByType.builds;
 
-    // 4) 汇总指标
+    // 4) 汇总主指标
     const limits = VERCEL_PLAN_LIMITS[plan] || {};
     const metrics = [];
     for (const [key, label, fields, kind, scale] of VERCEL_METRICS) {
@@ -242,6 +286,53 @@ async function getVercelUsage() {
       if (sum === null) continue;
       const used = scale === 1 ? sum : sum * scale;
       const metric = buildMetric(key, label, used, limits[key] ?? null, kind);
+      if (metric) metrics.push(metric);
+    }
+
+    // 5) 额外类型通用提取（有数据的字段才展示）
+    for (const t of VERCEL_EXTRA_TYPES) {
+      const dataList = dataByType[t];
+      if (!dataList.length) continue;
+      const totals = new Map();
+      for (const d of dataList) {
+        if (!d || typeof d !== 'object') continue;
+        for (const [k, v] of Object.entries(d)) {
+          if (typeof v === 'number' && isFinite(v) && !VERCEL_SKIP_FIELDS.has(k)) {
+            totals.set(k, (totals.get(k) || 0) + v);
+          }
+        }
+      }
+      for (const [field, sum] of totals) {
+        const { kind, scale } = inferFieldKind(field);
+        const metric = buildMetric(
+          `${t}.${field}`,
+          VERCEL_FIELD_LABELS[field] || prettifyFieldName(field),
+          sum * scale,
+          null,
+          kind
+        );
+        if (metric) metrics.push(metric);
+      }
+    }
+
+    // 6) 资源计数维度（项目数 / 域名数 / 本月部署数），失败不阻断
+    // 注意：/v6/deployments 的 pagination.count 只是当页条数，满页(100)时显示 100+
+    const sinceMs = from.getTime();
+    const [projects, domains, deployments] = await Promise.all([
+      fetchJSON(`https://api.vercel.com/v9/projects?limit=1${scope}`, { headers }).catch(() => null),
+      fetchJSON(`https://api.vercel.com/v5/domains?limit=1${scope}`, { headers }).catch(() => null),
+      fetchJSON(`https://api.vercel.com/v6/deployments?limit=100&since=${sinceMs}&state=READY${scope}`, { headers }).catch(() => null)
+    ]);
+    const deployCount = Array.isArray(deployments?.deployments) ? deployments.deployments.length : null;
+    const resourceCounts = [
+      ['projects', '项目数', projects?.pagination?.count, null],
+      ['domains', '域名数', domains?.pagination?.count, null],
+      ['deployments', '本月部署数', deployCount, deployCount >= 100 ? '100+' : null]
+    ];
+    for (const [key, label, count, displayOverride] of resourceCounts) {
+      if (typeof count !== 'number' || !isFinite(count)) continue;
+      const metric = buildMetric(key, label, count, null, 'count');
+      if (metric && displayOverride) metric.usedDisplay = displayOverride;
       if (metric) metrics.push(metric);
     }
 
@@ -302,6 +393,8 @@ async function getNetlifyUsage() {
       if (metric) metrics.push(metric);
     }
 
+    const allZero = metrics.every(m => m.used === 0);
+
     return {
       configured: true,
       ok: true,
@@ -311,6 +404,7 @@ async function getNetlifyUsage() {
         start: account?.current_billing_period_start,
         end: account?.next_billing_period_start
       }),
+      allZero,
       metrics
     };
   } catch (e) {
