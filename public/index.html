@@ -476,6 +476,7 @@
     background: var(--bg-tertiary); border: 1px dashed var(--border-color);
   }
   .usage-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; }
+  .usage-sub { font-size: 10px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .usage-item { margin-bottom: 0; }
   .usage-item-head {
     display: flex; justify-content: space-between; align-items: baseline;
@@ -888,6 +889,7 @@ function usageBarItem(m) {
       <div class="usage-bar">
         <div class="usage-bar-fill${barCls}" style="width: ${pct === null ? 0 : Math.min(pct, 100)}%;"></div>
       </div>
+      ${m.sub && m.sub.length ? `<div class="usage-sub">${m.sub.map(s => `${s.name} ${s.percent}%`).join(' · ')}</div>` : ''}
     </div>`;
 }
 
