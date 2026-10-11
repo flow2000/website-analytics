@@ -316,18 +316,24 @@ async function getVercelUsage() {
     }
 
     // 6) 资源计数维度（项目数 / 域名数 / 本月部署数），失败不阻断
-    // 注意：/v6/deployments 的 pagination.count 只是当页条数，满页(100)时显示 100+
+    // 注意：这几个端点的 pagination.count 只是当页条数，必须全量拉取后按数组长度计数；满页(100)时显示 100+
     const sinceMs = from.getTime();
     const [projects, domains, deployments] = await Promise.all([
-      fetchJSON(`https://api.vercel.com/v9/projects?limit=1${scope}`, { headers }).catch(() => null),
-      fetchJSON(`https://api.vercel.com/v5/domains?limit=1${scope}`, { headers }).catch(() => null),
+      fetchJSON(`https://api.vercel.com/v9/projects?limit=100${scope}`, { headers }).catch(() => null),
+      fetchJSON(`https://api.vercel.com/v5/domains?limit=100${scope}`, { headers }).catch(() => null),
       fetchJSON(`https://api.vercel.com/v6/deployments?limit=100&since=${sinceMs}&state=READY${scope}`, { headers }).catch(() => null)
     ]);
-    const deployCount = Array.isArray(deployments?.deployments) ? deployments.deployments.length : null;
+    const countOf = (resp, key) => {
+      const arr = Array.isArray(resp?.[key]) ? resp[key] : null;
+      return arr ? [arr.length, arr.length >= 100 ? '100+' : null] : [null, null];
+    };
+    const [projCount, projOverride] = countOf(projects, 'projects');
+    const [domCount, domOverride] = countOf(domains, 'domains');
+    const [deployCount, deployOverride] = countOf(deployments, 'deployments');
     const resourceCounts = [
-      ['projects', '项目数', projects?.pagination?.count, null],
-      ['domains', '域名数', domains?.pagination?.count, null],
-      ['deployments', '本月部署数', deployCount, deployCount >= 100 ? '100+' : null]
+      ['projects', '项目数', projCount, projOverride],
+      ['domains', '域名数', domCount, domOverride],
+      ['deployments', '本月部署数', deployCount, deployOverride]
     ];
     for (const [key, label, count, displayOverride] of resourceCounts) {
       if (typeof count !== 'number' || !isFinite(count)) continue;
