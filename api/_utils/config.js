@@ -12,6 +12,12 @@ const config = {
   // 导出接口访问密码
   exportKey: process.env.EXPORT_KEY || '',
 
+  // 部署平台额度查询（/api/usage）
+  vercelToken: process.env.VERCEL_TOKEN || '',
+  vercelTeamId: process.env.VERCEL_TEAM_ID || '',
+  netlifyToken: process.env.NETLIFY_TOKEN || '',
+  netlifyAccountSlug: process.env.NETLIFY_ACCOUNT_SLUG || '',
+
   // 默认统计天数
   defaultDays: 7,
 

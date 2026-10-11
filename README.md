@@ -54,6 +54,7 @@
 - 🎯 **流量质量指标** - 跳出率、访问时长、人均页数评级
 - 🏆 **多站点对比表** - 横向对比各站点表现
 - 📅 **7/30天切换** - 支持最近 7 天和最近 30 天数据查看
+- ⚙️ **平台额度展示** - 实时展示 Vercel / Netlify 部署平台的额度使用情况
 - 🌙/☀️ **明暗主题** - 支持深色/浅色模式切换
 
 ### AI 分析报告
@@ -65,10 +66,11 @@
 - 🎯 **战略建议** - 总览层面的多站点战略规划
 
 ### API 接口
-- 🔌 **RESTful API** - 4 个核心接口，支持前端和外部系统调用
+- 🔌 **RESTful API** - 5 个核心接口，支持前端和外部系统调用
 - 🔐 **访问控制** - 导出接口支持密码验证
 - 📤 **多格式导出** - 支持 JSON 和 CSV 格式导出
 - 📄 **分析 JSON 导出** - 提供结构化分析数据，供外部 AI 系统使用
+- ⚙️ **平台额度查询** - 实时查询 Vercel / Netlify 部署平台额度使用情况
 
 ## 📁 项目结构
 
@@ -84,11 +86,13 @@ server/
 │   │   ├── analyzer.js               # 数据分析器（统计+AI报告生成）
 │   │   ├── response.js               # 响应工具（统一格式/CORS/Query解析）
 │   │   ├── csv.js                    # CSV 导出工具
+│   │   ├── usage.js                  # 平台额度查询（Vercel/Netlify）
 │   │   └── config.js                 # 共享配置（环境变量统一管理）
 │   ├── sites.js                      # 获取站点列表 API
 │   ├── stats.js                      # 获取统计数据 API
 │   ├── analysis.js                   # 获取 AI 分析报告 API
-│   └── export.js                     # 原始数据导出 API（带密码验证）
+│   ├── export.js                     # 原始数据导出 API（带密码验证）
+│   └── usage.js                      # 平台额度使用情况 API
 ├── public/
 │   ├── data/
 │   │   └── report.json               # 静态报告数据（备用/离线使用）
@@ -127,6 +131,17 @@ server/
 | `MONGODB_DB` | ❌ | 数据库名 | `website_statistics` |
 | `MONGODB_COL` | ❌ | 集合名 | `51.la` |
 | `EXPORT_KEY` | ❌ | 导出接口访问密码，留空则不启用密码保护 | （空） |
+| `VERCEL_TOKEN` | ❌ | Vercel 个人访问令牌，用于展示 Vercel 额度 | （空=不展示） |
+| `VERCEL_TEAM_ID` | ❌ | Vercel 团队 ID，个人账号不用填 | （空） |
+| `NETLIFY_TOKEN` | ❌ | Netlify 个人访问令牌，用于展示 Netlify 额度 | （空=不展示） |
+| `NETLIFY_ACCOUNT_SLUG` | ❌ | Netlify 团队 slug，不填默认取第一个团队 | （空） |
+
+**平台额度 Token 获取方式**（用于网站上的「平台额度使用情况」展示）：
+
+- **Vercel**：访问 [vercel.com/account/settings/tokens](https://vercel.com/account/settings/tokens) → Create Token，复制生成的令牌填入 `VERCEL_TOKEN`。如需展示团队额度，在团队设置页 URL 或 Team ID 中找到 `VERCEL_TEAM_ID`
+- **Netlify**：访问 [app.netlify.com/user/applications](https://app.netlify.com/user/applications) → Personal access tokens → New access token，填入 `NETLIFY_TOKEN`。团队 slug 在 Team settings → General → Team information 中查看
+
+> Token 仅保存在部署平台服务端，用于服务端调用平台 API，不会暴露给前端。未配置 Token 时网站会正常显示，对应平台显示「未配置」提示。
 
 ### 3. 触发数据采集
 
@@ -483,6 +498,80 @@ npx serve public
 
 ---
 
+### 5. 平台额度使用情况
+
+**GET** `/api/usage`
+
+实时查询 Vercel / Netlify 部署平台的额度使用情况，前端「平台额度使用情况」板块即使用此接口。
+
+需要在部署平台配置 `VERCEL_TOKEN` / `NETLIFY_TOKEN` 环境变量，未配置 Token 的平台返回 `configured: false`。
+
+**响应示例：**
+
+```json
+{
+  "success": true,
+  "data": {
+    "fetchedAt": "2026-10-11T08:00:00.000Z",
+    "vercel": {
+      "configured": true,
+      "ok": true,
+      "account": "my-vercel-account",
+      "plan": null,
+      "period": "2026-10-01 ~ 2026-10-31",
+      "metrics": [
+        {
+          "key": "bandwidth",
+          "label": "带宽",
+          "used": 32122884352,
+          "usedDisplay": "29.92 GB",
+          "included": 107374182400,
+          "includedDisplay": "100 GB",
+          "percent": 29.9,
+          "kind": "bytes"
+        },
+        {
+          "key": "buildMinutes",
+          "label": "构建时长",
+          "used": 120,
+          "usedDisplay": "120 分钟",
+          "included": 6000,
+          "includedDisplay": "6000 分钟",
+          "percent": 2,
+          "kind": "minutes"
+        }
+      ]
+    },
+    "netlify": {
+      "configured": true,
+      "ok": true,
+      "account": "my-netlify-team",
+      "plan": "Starter",
+      "period": null,
+      "metrics": [
+        { "key": "sites", "label": "站点数", "used": 3, "usedDisplay": "3", "included": 500, "includedDisplay": "500", "percent": 0.6, "kind": "count" },
+        { "key": "collaborators", "label": "协作者数", "used": 1, "usedDisplay": "1", "included": 1, "includedDisplay": "1", "percent": 100, "kind": "count" }
+      ]
+    }
+  }
+}
+```
+
+**说明：**
+
+| 字段 | 说明 |
+|------|------|
+| `configured` | 是否配置了对应平台的 Token |
+| `hint` | 未配置时的提示文案 |
+| `ok` | 查询是否成功 |
+| `error` | 查询失败原因（Token 失效、网络超时等） |
+| `account` | 账号/团队名称 |
+| `plan` | 套餐名称（平台提供时返回） |
+| `period` | 账期范围（平台提供时返回） |
+| `metrics[].percent` | 使用百分比（有额度上限时返回），前端按 ≥70% 黄色、≥90% 红色预警 |
+
+---
+
 ## 🔄 数据流说明
 
 ### 数据采集流程
@@ -620,14 +709,19 @@ npx serve public
 | `MONGODB_DB` | 数据库名 | `website_statistics` |
 | `MONGODB_COL` | 集合名 | `51.la` |
 | `EXPORT_KEY` | 导出接口访问密码，留空则不启用密码保护 | （空） |
+| `VERCEL_TOKEN` | Vercel 个人访问令牌，用于 /api/usage 额度查询 | （空） |
+| `VERCEL_TEAM_ID` | Vercel 团队 ID，个人账号不用填 | （空） |
+| `NETLIFY_TOKEN` | Netlify 个人访问令牌，用于 /api/usage 额度查询 | （空） |
+| `NETLIFY_ACCOUNT_SLUG` | Netlify 团队 slug，不填默认取第一个团队 | （空） |
 
 ## 🔐 安全建议
 
 1. **设置导出密码** - 建议配置 `EXPORT_KEY` 环境变量以保护导出接口，未设置时接口无密码保护
 2. **HTTPS** - 确保部署平台启用 HTTPS，防止密码明文传输
 3. **密钥管理** - 所有敏感信息都通过环境变量/Secrets 管理，不要硬编码
-4. **定期轮换** - 定期更换 51.la 密钥和导出密码
+4. **定期轮换** - 定期更换 51.la 密钥、导出密码和平台额度 Token
 5. **访问控制** - `/api/export` 和带 key 的 `/api/analysis` 接口应妥善保管密码
+6. **额度 Token 最小授权** - `VERCEL_TOKEN` / `NETLIFY_TOKEN` 仅用于服务端查询用量，仅保存在部署平台服务端，请勿在前端代码中引用
 
 ## 🤝 与外部 AI 系统集成
 
