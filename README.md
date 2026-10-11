@@ -441,7 +441,7 @@ npx serve public
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
 | `key` | string | ❌ | 访问密码（配置了 `EXPORT_KEY` 时必填） |
-| `format` | string | ❌ | 导出格式：`json`（默认）或 `csv` |
+| `format` | string | ❌ | 导出格式：`json`（默认）或 `csv`；其他值返回 `400` |
 | `site` | string | ❌ | 指定站点名，留空则导出全部站点 |
 | `days` | number | ❌ | 最近 N 天的数据 |
 | `start` | string | ❌ | 开始日期（YYYY-MM-DD） |
