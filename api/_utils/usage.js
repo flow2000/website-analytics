@@ -447,17 +447,20 @@ async function getNetlifyUsage() {
 
     const allZero = metrics.every(m => m.used === 0);
 
+    // period_end_date 语义为「下一账期开始时刻」（排他边界），展示含尾日需减 1 天
+    // 例：2026-10-01 ~ 2026-11-01(00:00) 实际覆盖 10-01 ~ 10-31
+    const periodEndRaw = buildsStatus?.minutes?.period_end_date || account?.next_billing_period_start;
+    const periodEnd = periodEndRaw ? new Date(new Date(periodEndRaw).getTime() - 86400000).toISOString() : null;
+
     return {
       configured: true,
       ok: true,
       account: account?.name || account?.slug || 'Netlify 团队',
       plan: account?.type_name || account?.type || null,
-      period: formatPeriod(buildsStatus?.minutes?.period_start_date
-        ? { start: buildsStatus.minutes.period_start_date, end: buildsStatus.minutes.period_end_date }
-        : {
-            start: account?.current_billing_period_start,
-            end: account?.next_billing_period_start
-          }),
+      period: formatPeriod({
+        start: buildsStatus?.minutes?.period_start_date || account?.current_billing_period_start,
+        end: periodEnd
+      }),
       allZero,
       metrics
     };
