@@ -16,6 +16,9 @@ const {
 
 const { generateCSV } = require('./api/_utils/csv');
 
+// 额度查询复用真实实现（配置 VERCEL_TOKEN / NETLIFY_TOKEN 环境变量后查询真实数据）
+const { getVercelUsage, getNetlifyUsage } = require('./api/_utils/usage');
+
 const PORT = process.env.PORT || 3001;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -292,6 +295,15 @@ function handleExport(res, query) {
   res.end(JSON.stringify(result));
 }
 
+// GET /api/usage
+async function handleUsage(res) {
+  const [vercel, netlify] = await Promise.all([
+    getVercelUsage(),
+    getNetlifyUsage()
+  ]);
+  success(res, { fetchedAt: new Date().toISOString(), vercel, netlify });
+}
+
 // ========== 静态文件服务 ==========
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -347,6 +359,7 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/stats') return handleStats(res, query);
     if (pathname === '/api/analysis') return handleAnalysis(res, query);
     if (pathname === '/api/export') return handleExport(res, query);
+    if (pathname === '/api/usage') return handleUsage(res);
 
     // 静态文件
     let filePath = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
@@ -373,6 +386,7 @@ server.listen(PORT, () => {
   console.log('   GET /api/stats       - 统计数据 (?site=&days=)');
   console.log('   GET /api/analysis    - AI 分析报告 (?site=&days=)');
   console.log('   GET /api/export      - 数据导出 (?format=json|csv&site=&days=)');
+  console.log('   GET /api/usage       - 平台额度使用情况（Vercel/Netlify）');
   console.log('');
   console.log('📊 Mock 数据:');
   console.log(`   站点数: ${MOCK_SITES.length}`);

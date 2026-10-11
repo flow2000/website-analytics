@@ -440,6 +440,68 @@
     border-radius: 20px; font-size: 12px; font-weight: 600;
   }
 
+  /* Platform Usage */
+  .usage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .usage-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .usage-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .usage-logo {
+    width: 34px; height: 34px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; flex-shrink: 0;
+  }
+  .usage-logo.vercel { background: #000; color: #fff; border: 1px solid var(--border-color); }
+  .usage-logo.netlify { background: linear-gradient(135deg, #014880, #05bdba); color: #fff; }
+  .usage-card-title { font-weight: 600; font-size: 14px; }
+  .usage-card-sub { font-size: 12px; color: var(--text-muted); }
+  .usage-plan-badge {
+    margin-left: auto; font-size: 11px; padding: 2px 10px;
+    border-radius: 999px; flex-shrink: 0;
+    background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);
+  }
+  .usage-period { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .usage-item { margin-bottom: 12px; }
+  .usage-item:last-child { margin-bottom: 2px; }
+  .usage-item-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; gap: 8px;
+  }
+  .usage-item-head strong { color: var(--text-primary); font-weight: 600; }
+  .usage-item-head .usage-val { color: var(--text-primary); font-weight: 600; }
+  .usage-item-head .usage-pct { color: var(--text-muted); font-size: 11px; }
+  .usage-bar {
+    height: 6px; border-radius: 3px;
+    background: var(--bg-tertiary); overflow: hidden;
+  }
+  .usage-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--accent-green);
+    transition: width 0.5s ease;
+  }
+  .usage-bar-fill.warn { background: var(--accent-yellow); }
+  .usage-bar-fill.danger { background: var(--accent-red); }
+  .usage-error {
+    font-size: 12px; color: var(--accent-yellow);
+    background: rgba(234, 179, 8, 0.08);
+    border: 1px solid rgba(234, 179, 8, 0.25);
+    padding: 8px 10px; border-radius: 8px;
+    word-break: break-all;
+  }
+  .usage-hint { font-size: 12px; color: var(--text-muted); line-height: 1.8; }
+  .usage-hint code {
+    background: var(--bg-tertiary); padding: 1px 6px;
+    border-radius: 4px; font-size: 11px; color: var(--accent-cyan);
+  }
+  .usage-updated { font-size: 12px; color: var(--text-muted); }
+
   /* Loading & Error */
   .loading {
     display: flex; align-items: center; justify-content: center;
@@ -495,6 +557,8 @@
     .chart-container { height: 220px; }
     .quality-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .ai-section { padding: 16px; margin-bottom: 16px; border-radius: 10px; }
+    .usage-grid { grid-template-columns: 1fr; gap: 10px; }
+    .usage-card { padding: 14px; border-radius: 10px; }
     .ai-findings { grid-template-columns: 1fr; gap: 8px; }
     .comparison-table { font-size: 12px; }
     .comparison-table th, .comparison-table td { padding: 10px 12px; white-space: nowrap; }
@@ -621,6 +685,17 @@
         </thead>
         <tbody id="comparisonBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- Platform Usage -->
+  <div class="chart-section" id="usageSection">
+    <div class="section-header">
+      <div class="section-title">⚙️ 平台额度使用情况</div>
+      <div class="usage-updated" id="usageUpdated"></div>
+    </div>
+    <div class="usage-grid" id="usageGrid">
+      <div class="loading" style="grid-column: 1/-1; padding: 24px;"><div class="spinner"></div> 加载额度数据...</div>
     </div>
   </div>
 
@@ -764,6 +839,87 @@ async function loadAnalysis(days) {
 
 async function loadSites() {
   return fetchJSON(`${API_BASE}/sites`);
+}
+
+// ========== 平台额度使用情况 ==========
+async function loadUsage() {
+  const grid = $('usageGrid');
+  try {
+    const data = await fetchJSON(`${API_BASE}/usage`);
+    renderUsage(data);
+  } catch (e) {
+    grid.innerHTML = `<div class="usage-hint" style="grid-column: 1/-1;">额度数据加载失败：${e.message}</div>`;
+  }
+}
+
+function usageCardHead(name, logoClass, logoText, subtitle, plan) {
+  return `
+    <div class="usage-card-head">
+      <div class="usage-logo ${logoClass}">${logoText}</div>
+      <div>
+        <div class="usage-card-title">${name}</div>
+        <div class="usage-card-sub">${subtitle || ''}</div>
+      </div>
+      ${plan ? `<span class="usage-plan-badge">${plan}</span>` : ''}
+    </div>`;
+}
+
+function usageBarItem(m) {
+  const usedText = m.usedDisplay ?? '--';
+  const pct = typeof m.percent === 'number' ? m.percent : null;
+  const barCls = pct === null ? '' : (pct >= 90 ? ' danger' : pct >= 70 ? ' warn' : '');
+  const right = m.includedDisplay
+    ? `<span class="usage-val">${usedText}</span> / ${m.includedDisplay}` +
+      (pct !== null ? ` <span class="usage-pct">（${pct}%）</span>` : '')
+    : `<span class="usage-val">${usedText}</span>`;
+  return `
+    <div class="usage-item">
+      <div class="usage-item-head">
+        <strong>${m.label}</strong>
+        <span>${right}</span>
+      </div>
+      <div class="usage-bar">
+        <div class="usage-bar-fill${barCls}" style="width: ${pct === null ? 0 : Math.min(pct, 100)}%;"></div>
+      </div>
+    </div>`;
+}
+
+function renderUsageCard(platform, cnName, logoClass, logoText) {
+  const u = platform;
+  if (!u.configured) {
+    return `
+      <div class="usage-card">
+        ${usageCardHead(cnName, logoClass, logoText, '未配置')}
+        <div class="usage-hint">${u.hint || '未配置访问令牌'}</div>
+      </div>`;
+  }
+  if (!u.ok) {
+    return `
+      <div class="usage-card">
+        ${usageCardHead(cnName, logoClass, logoText, u.account || '')}
+        <div class="usage-error">⚠️ ${u.error || '查询失败'}</div>
+      </div>`;
+  }
+  const metrics = u.metrics || [];
+  const body = metrics.length
+    ? metrics.map(usageBarItem).join('')
+    : '<div class="usage-hint">暂无额度数据</div>';
+  return `
+    <div class="usage-card">
+      ${usageCardHead(cnName, logoClass, logoText, u.account || '', u.plan)}
+      ${u.period ? `<div class="usage-period">📅 账期：${u.period}</div>` : ''}
+      ${body}
+    </div>`;
+}
+
+function renderUsage(data) {
+  if (!data) return;
+  $('usageGrid').innerHTML =
+    renderUsageCard(data.vercel, 'Vercel', 'vercel', '▲') +
+    renderUsageCard(data.netlify, 'Netlify', 'netlify', 'NL');
+  if (data.fetchedAt) {
+    $('usageUpdated').textContent = '更新于 ' + new Date(data.fetchedAt).toLocaleTimeString('zh-CN');
+  }
 }
 
 // ========== 站点标签 ==========
@@ -1413,7 +1569,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 按钮事件
   $('themeBtn').addEventListener('click', toggleTheme);
-  $('refreshBtn').addEventListener('click', () => loadAndRender(STATE.currentDays));
+  $('refreshBtn').addEventListener('click', () => {
+    loadAndRender(STATE.currentDays);
+    loadUsage();
+  });
 
   // 图表指标切换
   document.querySelectorAll('.metric-btn').forEach(btn => {
@@ -1438,6 +1597,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 启动
   loadAndRender(7);
+  loadUsage();
 });
 </script>
 </body>
