@@ -512,45 +512,33 @@ npx serve public
 {
   "success": true,
   "data": {
-    "fetchedAt": "2026-10-11T08:00:00.000Z",
+    "fetchedAt": "2026-10-11T13:29:05.563Z",
     "vercel": {
       "configured": true,
       "ok": true,
-      "account": "my-vercel-account",
-      "plan": null,
-      "period": "2026-10-01 ~ 2026-10-31",
+      "account": "flow2000's projects",
+      "plan": "hobby",
+      "period": "2026-10-01 ~ 2026-10-11",
       "metrics": [
-        {
-          "key": "bandwidth",
-          "label": "带宽",
-          "used": 32122884352,
-          "usedDisplay": "29.92 GB",
-          "included": 107374182400,
-          "includedDisplay": "100 GB",
-          "percent": 29.9,
-          "kind": "bytes"
-        },
-        {
-          "key": "buildMinutes",
-          "label": "构建时长",
-          "used": 120,
-          "usedDisplay": "120 分钟",
-          "included": 6000,
-          "includedDisplay": "6000 分钟",
-          "percent": 2,
-          "kind": "minutes"
-        }
+        { "key": "bandwidth", "label": "带宽（外发）", "used": 27685208412, "usedDisplay": "25.78 GB", "included": 107374182400, "includedDisplay": "100 GB", "percent": 25.8, "kind": "bytes" },
+        { "key": "requests", "label": "请求数", "used": 497616, "usedDisplay": "497,616", "included": null, "includedDisplay": null, "percent": null, "kind": "count" },
+        { "key": "functionInvocations", "label": "函数调用数", "used": 157433, "usedDisplay": "157,433", "included": null, "includedDisplay": null, "percent": null, "kind": "count" },
+        { "key": "functionExecution", "label": "函数执行", "used": 10.81, "usedDisplay": "10.81 GB-hrs", "included": null, "includedDisplay": null, "percent": null, "kind": "gbhours" },
+        { "key": "builds", "label": "构建次数", "used": 241, "usedDisplay": "241", "included": null, "includedDisplay": null, "percent": null, "kind": "count" },
+        { "key": "buildTime", "label": "构建时长", "used": 219, "usedDisplay": "219 分钟", "included": null, "includedDisplay": null, "percent": null, "kind": "minutes" }
       ]
     },
     "netlify": {
       "configured": true,
       "ok": true,
-      "account": "my-netlify-team",
-      "plan": "Starter",
-      "period": null,
+      "account": "flow2000's team",
+      "plan": "Free",
+      "period": "2026-10-01 ~ 2026-11-01",
       "metrics": [
-        { "key": "sites", "label": "站点数", "used": 3, "usedDisplay": "3", "included": 500, "includedDisplay": "500", "percent": 0.6, "kind": "count" },
-        { "key": "collaborators", "label": "协作者数", "used": 1, "usedDisplay": "1", "included": 1, "includedDisplay": "1", "percent": 100, "kind": "count" }
+        { "key": "sites", "label": "站点数", "used": 0, "usedDisplay": "0", "included": 500, "includedDisplay": "500", "percent": 0, "kind": "count" },
+        { "key": "bandwidth", "label": "带宽", "used": 0, "usedDisplay": "0 GB", "included": 107374182400, "includedDisplay": "100 GB", "percent": 0, "kind": "bytes" },
+        { "key": "build_minutes", "label": "构建时长", "used": 0, "usedDisplay": "0 分钟", "included": 300, "includedDisplay": "300 分钟", "percent": 0, "kind": "minutes" },
+        { "key": "edge_functions", "label": "Edge 函数调用", "used": 0, "usedDisplay": "0", "included": 1000000, "includedDisplay": "1,000,000", "percent": 0, "kind": "count" }
       ]
     }
   }
@@ -566,9 +554,11 @@ npx serve public
 | `ok` | 查询是否成功 |
 | `error` | 查询失败原因（Token 失效、网络超时等） |
 | `account` | 账号/团队名称 |
-| `plan` | 套餐名称（平台提供时返回） |
-| `period` | 账期范围（平台提供时返回） |
+| `plan` | 套餐名称（Vercel 取团队 `billing.plan`，Netlify 取 `type_name`） |
+| `period` | 账期范围（Vercel 为当前自然月，Netlify 取计费周期） |
 | `metrics[].percent` | 使用百分比（有额度上限时返回），前端按 ≥70% 黄色、≥90% 红色预警 |
+
+**Vercel 指标来源：** `GET /v2/usage?type=requests|builds&from=&to=`（当前自然月），汇总各周期条目得到总量；带宽额度上限来自内置套餐表（Hobby 100 GB / Pro 1 TB），其余指标 API 不返回上限、仅展示用量。**Netlify 指标来源：** `GET /api/v1/accounts` 的 `capabilities`，`included` 即额度上限。
 
 ---
 

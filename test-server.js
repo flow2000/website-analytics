@@ -301,7 +301,7 @@ async function handleUsage(res) {
     getVercelUsage(),
     getNetlifyUsage()
   ]);
-  success(res, { fetchedAt: new Date().toISOString(), vercel, netlify });
+  jsonResponse(res, { success: true, data: { fetchedAt: new Date().toISOString(), vercel, netlify } }, 200, { 'Cache-Control': 'no-store' });
 }
 
 // ========== 静态文件服务 ==========
