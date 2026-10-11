@@ -469,8 +469,8 @@
     background: rgba(59, 130, 246, 0.15); color: var(--accent-blue);
   }
   .usage-period { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
-  .usage-item { margin-bottom: 12px; }
-  .usage-item:last-child { margin-bottom: 2px; }
+  .usage-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; }
+  .usage-item { margin-bottom: 0; }
   .usage-item-head {
     display: flex; justify-content: space-between; align-items: baseline;
     font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; gap: 8px;
@@ -906,7 +906,7 @@ function renderUsageCard(platform, cnName, logoClass, logoText) {
   }
   const metrics = u.metrics || [];
   const body = metrics.length
-    ? metrics.map(usageBarItem).join('')
+    ? `<div class="usage-metrics">${metrics.map(usageBarItem).join('')}</div>`
     : '<div class="usage-hint">暂无额度数据</div>';
   return `
     <div class="usage-card">

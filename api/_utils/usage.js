@@ -10,21 +10,31 @@ const config = require('./config');
 
 const FETCH_TIMEOUT = 8000;
 
-// Vercel 已知套餐的额度上限（API 不返回上限，仅用于计算使用百分比；未知套餐不显示百分比）
+// Vercel 已知套餐的额度上限（API 不返回上限，取自官方仪表盘 Hobby/Pro 套餐页，仅用于计算使用百分比）
 const VERCEL_PLAN_LIMITS = {
-  hobby: { bandwidth: 100 * 1024 * 1024 * 1024 }, // 100 GB
-  pro: { bandwidth: 1024 * 1024 * 1024 * 1024 }   // 1 TB
+  hobby: {
+    bandwidth: 100 * 1024 * 1024 * 1024, // Fast Data Transfer 100 GB
+    requests: 1000000,                   // CDN Requests 1M
+    functionInvocations: 1000000,        // Function Invocations 1M
+    functionExecution: 100               // Function Duration 100 GB-Hrs
+  },
+  pro: {
+    bandwidth: 1024 * 1024 * 1024 * 1024 // Fast Data Transfer 1 TB
+  }
 };
 
 // Vercel 用量指标（type=requests / builds 响应字段汇总）
 // [输出 key, 展示名, 源字段列表(累加), 单位类型, 数值缩放(默认 1；秒→分钟为 1/60)]
 const VERCEL_METRICS = [
-  ['bandwidth', '带宽（外发）', ['bandwidth_outgoing_bytes'], 'bytes', 1],
-  ['requests', '请求数', ['request_hit_count', 'request_miss_count'], 'count', 1],
+  ['bandwidth', '数据传输（外发）', ['bandwidth_outgoing_bytes'], 'bytes', 1],
+  ['bandwidthIncoming', '数据传输（入站）', ['bandwidth_incoming_bytes'], 'bytes', 1],
+  ['requests', 'CDN 请求数', ['request_hit_count', 'request_miss_count'], 'count', 1],
   ['functionInvocations', '函数调用数', ['function_invocation_successful_count', 'function_invocation_error_count', 'function_invocation_throttle_count', 'function_invocation_timeout_count'], 'count', 1],
-  ['functionExecution', '函数执行', ['function_execution_successful_gb_hours', 'function_execution_error_gb_hours', 'function_execution_timeout_gb_hours'], 'gbhours', 1],
+  ['functionExecution', '函数执行时长', ['function_execution_successful_gb_hours', 'function_execution_error_gb_hours', 'function_execution_timeout_gb_hours'], 'gbhours', 1],
+  ['monitoring', '监控数据点', ['monitoring_metric_count'], 'count', 1],
   ['builds', '构建次数', ['build_completed_count'], 'count', 1],
-  ['buildTime', '构建时长', ['build_build_seconds'], 'minutes', 1 / 60]
+  ['buildTime', '构建时长', ['build_build_seconds'], 'minutes', 1 / 60],
+  ['queuedTime', '构建排队时长', ['build_queued_seconds'], 'minutes', 1 / 60]
 ];
 
 // Netlify 额度项白名单（GET /api/v1/accounts 的 capabilities 字段，仅保留消耗型额度）
@@ -38,7 +48,9 @@ const NETLIFY_CAPABILITIES = [
   ['functions', '函数调用数', 'count'],
   ['functions_gb_hour', '函数执行', 'gbhours'],
   ['builds_gb_hour', '构建执行', 'gbhours'],
-  ['form_submissions', '表单提交', 'count']
+  ['form_submissions', '表单提交', 'count'],
+  ['form_storage', '表单存储', 'bytes'],
+  ['identity_active_logins', 'Identity 活跃登录', 'count']
 ];
 
 /**
