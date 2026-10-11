@@ -289,6 +289,36 @@ async function getVercelUsage() {
       if (metric) metrics.push(metric);
     }
 
+    // 4.5) 主指标的项目级分布（响应自带 breakdown 按项目百分比，跨周期取平均占比，取 Top3）
+    const VERCEL_BREAKDOWN_SOURCES = {
+      bandwidth: 'bandwidth',
+      requests: 'requests',
+      functionInvocations: 'function_invocations',
+      functionExecution: 'function_execution'
+    };
+    const validPeriods = requestData.filter(d => d && typeof d === 'object').length || 1;
+    const subAgg = {};
+    for (const d of requestData) {
+      if (!d || typeof d !== 'object') continue;
+      for (const [bk, list] of Object.entries(d.breakdown || {})) {
+        if (!Array.isArray(list)) continue;
+        const m = subAgg[bk] || (subAgg[bk] = new Map());
+        for (const it of list) {
+          if (!it || !it.name || typeof it.percent !== 'number' || !isFinite(it.percent)) continue;
+          m.set(it.name, (m.get(it.name) || 0) + it.percent / validPeriods);
+        }
+      }
+    }
+    for (const [metricKey, bk] of Object.entries(VERCEL_BREAKDOWN_SOURCES)) {
+      const m = metrics.find(x => x.key === metricKey);
+      const agg = subAgg[bk];
+      if (!m || !agg || !agg.size) continue;
+      m.sub = [...agg.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([name, percent]) => ({ name, percent: Math.round(percent * 10) / 10 }));
+    }
+
     // 5) 额外类型通用提取（有数据的字段才展示）
     for (const t of VERCEL_EXTRA_TYPES) {
       const dataList = dataByType[t];
@@ -387,13 +417,29 @@ async function getNetlifyUsage() {
     const slug = config.netlifyAccountSlug;
     const account = (slug && list.find(a => a.slug === slug || a.id === slug)) || list[0];
 
+    // 构建分钟的真实用量：capabilities.build_minutes.used 长期上报为 0，
+    // GET /api/v1/{account_id}/builds/status 的 minutes 才是官方权威统计（含账期与包含额度）
+    let buildsStatus = null;
+    if (account?.id) {
+      buildsStatus = await fetchJSON(
+        `https://api.netlify.com/api/v1/${account.id}/builds/status`,
+        { headers }
+      ).catch(() => null);
+    }
+
     const caps = account?.capabilities || {};
     const metrics = [];
     for (const [key, label, kind] of NETLIFY_CAPABILITIES) {
       const raw = caps[key];
       if (!raw || typeof raw !== 'object') continue;
-      const used = pickNumber(raw, ['used']);
-      const included = pickNumber(raw, ['included', 'max']);
+      let used = pickNumber(raw, ['used']);
+      let included = pickNumber(raw, ['included', 'max']);
+      if (key === 'build_minutes' && buildsStatus?.minutes) {
+        const cur = pickNumber(buildsStatus.minutes, ['current']);
+        if (cur !== null) used = cur;
+        const inc = pickNumber(buildsStatus.minutes, ['included_minutes_with_packs', 'included_minutes']);
+        if (inc !== null) included = inc;
+      }
       if (used === null && included === null) continue;
       const metric = buildMetric(key, label, used, included, kind);
       if (metric) metrics.push(metric);
@@ -406,10 +452,12 @@ async function getNetlifyUsage() {
       ok: true,
       account: account?.name || account?.slug || 'Netlify 团队',
       plan: account?.type_name || account?.type || null,
-      period: formatPeriod({
-        start: account?.current_billing_period_start,
-        end: account?.next_billing_period_start
-      }),
+      period: formatPeriod(buildsStatus?.minutes?.period_start_date
+        ? { start: buildsStatus.minutes.period_start_date, end: buildsStatus.minutes.period_end_date }
+        : {
+            start: account?.current_billing_period_start,
+            end: account?.next_billing_period_start
+          }),
       allZero,
       metrics
     };
