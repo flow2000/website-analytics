@@ -268,8 +268,17 @@ async function getVercelUsage() {
     const base = `https://api.vercel.com/v2/usage?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(now.toISOString())}${scope}`;
 
     const allTypes = ['requests', 'builds', ...VERCEL_EXTRA_TYPES];
+    // 主用量类型（requests/builds）的失败要保留错误信息，不能静默吞掉；
+    // 否则 token 403 时会得到 ok:true + 空指标，前端只显示「暂无数据」而无从排查
+    let primaryError = null;
     const usageResults = await Promise.all(
-      allTypes.map(t => fetchJSON(`${base}&type=${t}`, { headers }).catch(() => null))
+      allTypes.map(t => fetchJSON(`${base}&type=${t}`, { headers }).catch((e) => {
+        if (t === 'requests' || t === 'builds') {
+          const msg = String(e && e.message || e);
+          if (!primaryError) primaryError = msg;
+        }
+        return null;
+      }))
     );
     const dataByType = {};
     allTypes.forEach((t, i) => {
@@ -370,6 +379,24 @@ async function getVercelUsage() {
       const metric = buildMetric(key, label, count, null, 'count');
       if (metric && displayOverride) metric.usedDisplay = displayOverride;
       if (metric) metrics.push(metric);
+    }
+
+    // 7) 主用量查询全部失败（如 Token 对该 scope 返回 403）：
+    //    明确报错而不是返回空指标，前端展示可操作的排错提示
+    if (!requestData.length && !buildData.length && primaryError && !metrics.length) {
+      const scopeDenied = /not authorized|re-authenticate|forbidden/i.test(primaryError);
+      const detail = scopeDenied
+        ? 'Token 无权访问该账号 scope（Vercel 返回 re-authenticate to this scope）。请重新生成 Token 时勾选对应的团队/项目权限范围（Scope），或在 Vercel 完成一次 SSO 授权后重试'
+        : `用量接口请求失败：${primaryError}`;
+      return {
+        configured: true,
+        ok: false,
+        error: detail,
+        account,
+        plan,
+        period: `${from.toISOString().slice(0, 10)} ~ ${now.toISOString().slice(0, 10)}`,
+        metrics: []
+      };
     }
 
     return {

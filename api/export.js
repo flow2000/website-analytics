@@ -58,6 +58,9 @@ const handler = wrapHandler(async (event) => {
 
   try {
     const format = getQueryStr(query, 'format', 'json').toLowerCase();
+    if (format !== 'json' && format !== 'csv') {
+      return errorResponse(`不支持的导出格式: ${format}（仅支持 json / csv）`, 400);
+    }
     const site = getQueryStr(query, 'site');
     const days = getQueryInt(query, 'days', 0);
     const startDate = getQueryStr(query, 'start');
