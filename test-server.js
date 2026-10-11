@@ -144,7 +144,8 @@ function error(res, message, statusCode = 400) {
 
 function getSiteRecords(siteName, days) {
   const siteRecords = ALL_RECORDS.filter(r => r.site === siteName);
-  return siteRecords.slice(-days);
+  // 与生产 buildDateQuery 语义一致：days 为正数取最近 N 天，否则返回全部
+  return days > 0 ? siteRecords.slice(-days) : siteRecords;
 }
 
 // GET /api/sites
@@ -232,6 +233,9 @@ function handleAnalysis(res, query) {
 // GET /api/export
 function handleExport(res, query) {
   const format = (query.format || 'json').toLowerCase();
+  if (format !== 'json' && format !== 'csv') {
+    return error(res, `不支持的导出格式: ${format}（仅支持 json / csv）`, 400);
+  }
   const site = query.site || '';
   const days = parseInt(query.days, 10) || 0;
 
