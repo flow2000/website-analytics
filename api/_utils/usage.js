@@ -298,7 +298,8 @@ async function getVercelUsage() {
       if (metric) metrics.push(metric);
     }
 
-    // 4.5) 主指标的项目级分布（响应自带 breakdown 按项目百分比，跨周期取平均占比，取 Top3）
+    // 4.5) 主指标的项目级分布（响应自带 breakdown 按项目百分比，跨周期取平均占比，
+    //      返回全部项目：前端内联展示 Top3，点击后翻转卡片查看完整占比）
     const VERCEL_BREAKDOWN_SOURCES = {
       bandwidth: 'bandwidth',
       requests: 'requests',
@@ -324,7 +325,6 @@ async function getVercelUsage() {
       if (!m || !agg || !agg.size) continue;
       m.sub = [...agg.entries()]
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
         .map(([name, percent]) => ({ name, percent: Math.round(percent * 10) / 10 }));
     }
 
