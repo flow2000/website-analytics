@@ -510,6 +510,29 @@
   }
   .usage-updated { font-size: 12px; color: var(--text-muted); }
 
+  /* 项目占比翻转视图 */
+  .usage-sub.clickable { cursor: pointer; }
+  .usage-sub.clickable:hover { color: var(--accent-blue); }
+  .usage-sub .sub-more { color: var(--accent-blue); font-weight: 600; }
+  .usage-breakdown-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .usage-back-btn {
+    border: 1px solid var(--border-color); background: var(--bg-tertiary);
+    color: var(--text-secondary); font-size: 12px; padding: 3px 10px;
+    border-radius: 6px; cursor: pointer; flex-shrink: 0;
+  }
+  .usage-back-btn:hover { color: var(--accent-blue); border-color: var(--accent-blue); }
+  .usage-breakdown-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .usage-breakdown-list { max-height: 320px; overflow-y: auto; }
+  .usage-breakdown-row { margin-bottom: 10px; }
+  .usage-breakdown-row-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 12px; margin-bottom: 4px; gap: 8px;
+  }
+  .usage-breakdown-row-head .name { color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .usage-breakdown-row-head .pct { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
+
   /* Loading & Error */
   .loading {
     display: flex; align-items: center; justify-content: center;
@@ -872,7 +895,7 @@ function usageCardHead(name, logoClass, logoText, subtitle, plan) {
     </div>`;
 }
 
-function usageBarItem(m) {
+function usageBarItem(m, platformKey) {
   const usedText = m.usedDisplay ?? '--';
   const pct = typeof m.percent === 'number' ? m.percent : null;
   const barCls = pct === null ? '' : (pct >= 90 ? ' danger' : pct >= 70 ? ' warn' : '');
@@ -880,6 +903,12 @@ function usageBarItem(m) {
     ? `<span class="usage-val">${usedText}</span> / ${m.includedDisplay}` +
       (pct !== null ? ` <span class="usage-pct">（${pct}%）</span>` : '')
     : `<span class="usage-val">${usedText}</span>`;
+  let subHtml = '';
+  if (m.sub && m.sub.length) {
+    const top3 = m.sub.slice(0, 3).map(s => `${s.name} ${s.percent}%`).join(' · ');
+    const more = m.sub.length > 3 ? ` <span class="sub-more">等 ${m.sub.length} 项 ›</span>` : ' ›';
+    subHtml = `<div class="usage-sub clickable" data-platform="${platformKey}" data-metric="${m.key}" title="点击查看完整项目占比">${top3}${more}</div>`;
+  }
   return `
     <div class="usage-item">
       <div class="usage-item-head">
@@ -889,25 +918,51 @@ function usageBarItem(m) {
       <div class="usage-bar">
         <div class="usage-bar-fill${barCls}" style="width: ${pct === null ? 0 : Math.min(pct, 100)}%;"></div>
       </div>
-      ${m.sub && m.sub.length ? `<div class="usage-sub">${m.sub.map(s => `${s.name} ${s.percent}%`).join(' · ')}</div>` : ''}
+      ${subHtml}
     </div>`;
+}
+
+// 缓存最近一次额度数据，供占比翻转视图使用
+let lastUsageData = null;
+
+// 项目占比翻转视图：点击某个维度的占比行后，卡片切换为该维度全部项目的占比列表
+function showUsageBreakdown(cardEl, platformKey, metricKey) {
+  const platform = lastUsageData && lastUsageData[platformKey];
+  const metric = platform && (platform.metrics || []).find(m => m.key === metricKey);
+  if (!metric || !metric.sub || !metric.sub.length) return;
+  const rows = metric.sub.map(s => `
+    <div class="usage-breakdown-row">
+      <div class="usage-breakdown-row-head">
+        <span class="name">${s.name}</span>
+        <span class="pct">${s.percent}%</span>
+      </div>
+      <div class="usage-bar">
+        <div class="usage-bar-fill" style="width: ${Math.min(s.percent, 100)}%;"></div>
+      </div>
+    </div>`).join('');
+  cardEl.innerHTML = `
+    <div class="usage-breakdown-head">
+      <button class="usage-back-btn" data-platform="${platformKey}">‹ 返回</button>
+      <span class="usage-breakdown-title">${metric.label} · 项目占比（共 ${metric.sub.length} 项）</span>
+    </div>
+    <div class="usage-breakdown-list">${rows}</div>`;
 }
 
 // Netlify 图标：app.netlify.com 官方 favicon（48x48 PNG，青绿圆角菱形），base64 内联
 const NETLIFY_LOGO = '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAPoAAAD6AG1e1JrAAABTklEQVR4nO3aQWrDMBCFYcHI92kv0XbT83QXusiip9DkvUuGrlpUSEgoJJYsaUalA9pk9X/gYEt2CP/zexbVh8j0drnyb2GGEaTnyHSM1K+rhfQpTK9hynhOgJB78Z4RsjbeI0JK4z0hpDbeA0K2xlsipFU8DRDN4zkQ0S2eAxDd49kRMSyeHRDD49kQYRbPBgjzeG5AuIlnBcJdPAsQbuO5AiHUF9fxPK10zK1X8QvwOEe8nhG5+QyI0J19lBZeTrq7uPb13TyIZSs3/x1AnP0SWmb/E+eRw+FpCgRu3Qu8I7DmbuwVgZLnIW8I1DyRekFgy57AGoEWuzIrBFrui0cj0ONkYhQCPc+GeiMw4nSuFwIjz0dbI2BxQt0KAct3BFsR8PCWphbhIb4a4Sm+GOExfjXCc/xdxAzxp8kfdgjTXqAfP4tpP83HHmHwfANbZwPg3ME61wAAAABJRU5ErkJggg==" alt="Netlify">';
 
-function renderUsageCard(platform, cnName, logoClass, logoText) {
+function renderUsageCard(platform, platformKey, cnName, logoClass, logoText) {
   const u = platform;
   if (!u.configured) {
     return `
-      <div class="usage-card">
+      <div class="usage-card" data-platform="${platformKey}">
         ${usageCardHead(cnName, logoClass, logoText, '未配置')}
         <div class="usage-hint">${u.hint || '未配置访问令牌'}</div>
       </div>`;
   }
   if (!u.ok) {
     return `
-      <div class="usage-card">
+      <div class="usage-card" data-platform="${platformKey}">
         ${usageCardHead(cnName, logoClass, logoText, u.account || '')}
         <div class="usage-error">⚠️ ${u.error || '查询失败'}</div>
       </div>`;
@@ -915,10 +970,10 @@ function renderUsageCard(platform, cnName, logoClass, logoText) {
   const metrics = u.metrics || [];
   const body = metrics.length
     ? (u.allZero ? '<div class="usage-zero-hint">📭 当前账期暂无用量记录，以下为套餐包含额度</div>' : '') +
-      `<div class="usage-metrics">${metrics.map(usageBarItem).join('')}</div>`
+      `<div class="usage-metrics">${metrics.map(m => usageBarItem(m, platformKey)).join('')}</div>`
     : '<div class="usage-hint">暂无额度数据</div>';
   return `
-    <div class="usage-card">
+    <div class="usage-card" data-platform="${platformKey}">
       ${usageCardHead(cnName, logoClass, logoText, u.account || '', u.plan)}
       ${u.period ? `<div class="usage-period">📅 账期：${u.period}</div>` : ''}
       ${body}
@@ -927,13 +982,34 @@ function renderUsageCard(platform, cnName, logoClass, logoText) {
 
 function renderUsage(data) {
   if (!data) return;
+  lastUsageData = data;
   $('usageGrid').innerHTML =
-    renderUsageCard(data.vercel, 'Vercel', 'vercel', '▲') +
-    renderUsageCard(data.netlify, 'Netlify', 'netlify', NETLIFY_LOGO);
+    renderUsageCard(data.vercel, 'vercel', 'Vercel', 'vercel', '▲') +
+    renderUsageCard(data.netlify, 'netlify', 'Netlify', 'netlify', NETLIFY_LOGO);
   if (data.fetchedAt) {
     $('usageUpdated').textContent = '更新于 ' + new Date(data.fetchedAt).toLocaleTimeString('zh-CN');
   }
 }
+
+// 占比行点击 → 翻转到该维度全部项目占比；返回按钮 → 恢复卡片主视图
+$('usageGrid').addEventListener('click', (e) => {
+  const sub = e.target.closest('.usage-sub[data-metric]');
+  if (sub) {
+    const cardEl = sub.closest('.usage-card');
+    if (cardEl) showUsageBreakdown(cardEl, sub.dataset.platform, sub.dataset.metric);
+    return;
+  }
+  const backBtn = e.target.closest('.usage-back-btn');
+  if (backBtn) {
+    const cardEl = backBtn.closest('.usage-card');
+    const platformKey = backBtn.dataset.platform;
+    if (cardEl && lastUsageData && lastUsageData[platformKey]) {
+      const logos = { vercel: ['vercel', '▲', 'Vercel'], netlify: ['netlify', NETLIFY_LOGO, 'Netlify'] };
+      const [logoClass, logoText, cnName] = logos[platformKey] || [];
+      cardEl.outerHTML = renderUsageCard(lastUsageData[platformKey], platformKey, cnName, logoClass, logoText);
+    }
+  }
+});
 
 // ========== 站点标签 ==========
 function initSiteTabs() {
