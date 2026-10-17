@@ -67,48 +67,73 @@ function generateSign(nonce, timestamp) {
   return crypto.createHash('sha256').update(raw, 'utf8').digest('hex').toUpperCase();
 }
 
-async function fetchOverview(maskId) {
-  const timestamp = String(Date.now());
-  const nonce = generateNonce(4);
-  const sign = generateSign(nonce, timestamp);
-  const payload = {
-    maskId,
-    accessKey: config.accessKey,
-    nonce,
-    timestamp,
-    sign
-  };
-
+// 带超时的 fetch（Node 原生 fetch 无默认超时，可能一直挂起）
+async function fetchWithTimeout(url, options, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(config.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 GitHub Actions Collector'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      console.error(`  HTTP error: ${res.status}`);
-      return null;
-    }
-
-    const result = await res.json();
-    const code = result.code;
-    const success = code === '0000' || result.success === true;
-
-    if (!success) {
-      console.error(`  API error: code=${code}, message=${result.message}`);
-      return null;
-    }
-
-    return result;
-  } catch (e) {
-    console.error(`  请求异常: ${e.message}`);
-    return null;
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+// 提取底层错误原因（fetch failed 时 e.cause 才有真正原因）
+function describeFetchError(e) {
+  const cause = e && e.cause;
+  if (!cause) return e.message;
+  return `${e.message}（cause: ${cause.code || cause.errno || cause.message || 'unknown'}）`;
+}
+
+async function fetchOverview(maskId) {
+  const MAX_RETRIES = 3;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const timestamp = String(Date.now());
+    const nonce = generateNonce(4);
+    const sign = generateSign(nonce, timestamp);
+    const payload = { maskId, accessKey: config.accessKey, nonce, timestamp, sign };
+
+    try {
+      const res = await fetchWithTimeout(config.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://www.51.la/',
+          'Origin': 'https://www.51.la'
+        },
+        body: JSON.stringify(payload)
+      }, 15000);
+
+      if (!res.ok) {
+        lastError = new Error(`HTTP ${res.status}`);
+        console.error(`  [尝试 ${attempt}/${MAX_RETRIES}] HTTP ${res.status}`);
+      } else {
+        const result = await res.json();
+        const code = result.code;
+        const success = code === '0000' || result.success === true;
+        if (success) return result;
+        lastError = new Error(`API code=${code}, message=${result.message}`);
+        console.error(`  [尝试 ${attempt}/${MAX_RETRIES}] API error: code=${code}, message=${result.message}`);
+      }
+    } catch (e) {
+      lastError = e;
+      console.error(`  [尝试 ${attempt}/${MAX_RETRIES}] 请求异常: ${describeFetchError(e)}`);
+    }
+
+    // 重试前退避（第 1 次失败等 2s，第 2 次等 5s）
+    if (attempt < MAX_RETRIES) {
+      const wait = attempt === 1 ? 2000 : 5000;
+      console.log(`  ⏳ ${wait / 1000}s 后重试...`);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+
+  console.error(`  ❌ 已重试 ${MAX_RETRIES} 次仍失败: ${describeFetchError(lastError)}`);
+  return null;
 }
 
 // ========== MongoDB 存储 ==========

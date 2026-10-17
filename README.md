@@ -1,4 +1,4 @@
-# 51.LA 流量趋势分析 · AI 报告系统
+﻿# 51.LA 流量趋势分析 · AI 报告系统
 
 基于 51.la 数据的多站点流量趋势分析平台，支持 AI 智能分析报告、动态数据展示、7/30天数据切换。
 
@@ -8,7 +8,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │                   GitHub Actions                         │
 │  ┌─────────────────┐     ┌──────────────────────────┐  │
-│  │ 定时/手动触发    │────▶│ scripts/collect-data.js  │  │
+│  │ 手动触发         │────▶│ scripts/collect-data.js  │  │
 │  └─────────────────┘     └────────────┬─────────────┘  │
 │                                        │                 │
 │                                   调用 51.la API        │
@@ -44,7 +44,7 @@
 ## ✨ 功能特性
 
 ### 数据采集
-- 🔄 **每日自动采集** - GitHub Actions 定时触发，每天访问一次 51.la API
+- 🔄 **手动采集** - GitHub Actions 手动触发，访问 51.la API 获取数据
 - 💾 **原始数据存储** - 51.la 返回的完整 bean 数据原样保存到 MongoDB
 - 🏢 **多站点支持** - 同一账号下可配置多个站点，独立存储
 
@@ -145,9 +145,8 @@ server/
 
 ### 3. 触发数据采集
 
-工作流支持两种触发方式：
+工作流仅支持手动触发：
 
-- **定时触发**：每天 UTC 23:30（北京时间 07:30）自动运行
 - **手动触发**：GitHub 仓库 → Actions → "51.la Data Collector" → Run workflow
 
 ### 4. 部署到 Netlify / Vercel
@@ -565,7 +564,7 @@ npx serve public
 
 ### 数据采集流程
 
-1. **触发**：GitHub Actions 每天定时触发（或手动触发）
+1. **触发**：GitHub Actions 手动触发
 2. **采集**：`scripts/collect-data.js` 调用 51.la API 获取各站点数据
 3. **存储**：原始 bean 数据原样存入 MongoDB，按 `site + date` 复合唯一键 upsert
 4. **完成**：每个站点每天一条记录
@@ -722,7 +721,7 @@ npx serve public
 
 ```bash
 # 获取最近 30 天的分析数据
-curl "https://your-domain.com/api/analysis?key=your-password&days=30"
+curl "https://analytics.bimg.cc/api/analysis?key=your-password&days=30"
 ```
 
 优点：
@@ -736,10 +735,10 @@ curl "https://your-domain.com/api/analysis?key=your-password&days=30"
 
 ```bash
 # 获取最近 30 天的原始数据（JSON）
-curl "https://your-domain.com/api/export?key=your-password&days=30&format=json"
+curl "https://analytics.bimg.cc/api/export?key=your-password&days=30&format=json"
 
 # 获取指定站点的 CSV 数据
-curl "https://your-domain.com/api/export?key=your-password&site=example.com&format=csv"
+curl "https://analytics.bimg.cc/api/export?key=your-password&site=example.com&format=csv"
 ```
 
 优点：
