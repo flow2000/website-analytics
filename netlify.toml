@@ -14,18 +14,8 @@
   status = 200
 
 [[redirects]]
-  from = "/api/analysis"
-  to = "/.netlify/functions/analysis"
-  status = 200
-
-[[redirects]]
   from = "/api/export"
   to = "/.netlify/functions/export"
-  status = 200
-
-[[redirects]]
-  from = "/api/usage"
-  to = "/.netlify/functions/usage"
   status = 200
 
 [[headers]]
