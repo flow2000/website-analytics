@@ -1,45 +1,56 @@
 {
   "version": "2.0",
-  "generatedAt": "2026-10-17T21:05:30.670Z",
+  "generatedAt": "2026-10-18T21:06:28.951Z",
   "generator": "51.LA Analytics Engine",
   "dataSource": "51.LA Open API V6",
-  "days": 11,
+  "days": 12,
   "overview": {
     "totalSites": 2,
-    "totalUv": 66,
-    "totalPv": 83,
-    "totalSv": 70,
-    "totalIp": 62,
-    "totalNew": 62,
-    "avgBounceRate": 91.3,
-    "avgDuration": 36,
-    "avgPvPerUv": 1.28,
-    "yesterdayUv": 131,
-    "yesterdayPv": 151,
-    "yesterdaySv": 133,
-    "yesterdayIp": 122,
-    "yesterdayNew": 124,
-    "yesterdayBounceRate": 91.2,
-    "yesterdayDuration": 19,
-    "uvChange": -49.62,
-    "pvChange": -45.03,
-    "svChange": -47.37,
-    "ipChange": -49.18,
-    "newChange": -50,
-    "bounceChange": 0.12,
-    "durationChange": 91.89,
-    "compareDate": "2026-10-15",
-    "todayDate": "2026-10-17",
-    "reportDays": 11,
+    "totalUv": 196,
+    "totalPv": 234,
+    "totalSv": 208,
+    "totalIp": 146,
+    "totalNew": 189,
+    "avgBounceRate": 93.1,
+    "avgDuration": 18,
+    "avgPvPerUv": 1.19,
+    "yesterdayUv": 66,
+    "yesterdayPv": 83,
+    "yesterdaySv": 70,
+    "yesterdayIp": 62,
+    "yesterdayNew": 62,
+    "yesterdayBounceRate": 91.3,
+    "yesterdayDuration": 36,
+    "uvChange": 196.97,
+    "pvChange": 181.93,
+    "svChange": 197.14,
+    "ipChange": 135.48,
+    "newChange": 204.84,
+    "bounceChange": 2.02,
+    "durationChange": -49.3,
+    "compareDate": "2026-10-17",
+    "todayDate": "2026-10-18",
+    "reportDays": 12,
     "bestSite": "博客",
     "bestGrade": "待优化",
     "weakestSite": "壁纸网站",
-    "weakestGrade": "一般"
+    "weakestGrade": "待优化"
   },
   "sites": [
     {
       "name": "博客",
       "today": {
+        "uv": 104,
+        "pv": 127,
+        "sv": 113,
+        "ip": 88,
+        "newUser": 98,
+        "bounceRate": 94.69,
+        "avgDuration": 14,
+        "pvPerUv": 1.22
+      },
+      "todayDate": "2026-10-18",
+      "yesterday": {
         "uv": 44,
         "pv": 53,
         "sv": 48,
@@ -49,38 +60,27 @@
         "avgDuration": 4,
         "pvPerUv": 1.2
       },
-      "todayDate": "2026-10-17",
-      "yesterday": {
-        "uv": 86,
-        "pv": 95,
-        "sv": 87,
-        "ip": 84,
-        "newUser": 83,
-        "bounceRate": 95.4,
-        "avgDuration": 9,
-        "pvPerUv": 1.1
-      },
-      "compareDate": "2026-10-15",
+      "compareDate": "2026-10-17",
       "compare": {
-        "uvChange": -48.84,
-        "pvChange": -44.21,
-        "svChange": -44.83,
-        "ipChange": -50,
-        "newUserChange": -49.4
+        "uvChange": 136.36,
+        "pvChange": 139.62,
+        "svChange": 135.42,
+        "ipChange": 109.52,
+        "newUserChange": 133.33
       },
       "cumulative": {
-        "monthUv": 4195,
-        "monthPv": 4436,
-        "monthSv": 4233,
-        "monthIp": 3641,
-        "monthNewUserCount": 4144,
-        "monthBounceRate": 97,
+        "monthUv": 4293,
+        "monthPv": 4553,
+        "monthSv": 4338,
+        "monthIp": 3724,
+        "monthNewUserCount": 4235,
+        "monthBounceRate": 96.96,
         "monthAvgDuration": 5,
-        "totalUv": 27973,
-        "totalPv": 30927,
-        "totalSv": 28727,
-        "totalIp": 22855,
-        "totalNewUserCount": 26631,
+        "totalUv": 28071,
+        "totalPv": 31044,
+        "totalSv": 28832,
+        "totalIp": 22938,
+        "totalNewUserCount": 26722,
         "totalBounceRate": 95.38,
         "totalAvgDuration": 17,
         "topUv": 863,
@@ -94,17 +94,17 @@
       },
       "quality": {
         "bounceRate": {
-          "value": 91.67,
+          "value": 94.69,
           "level": "偏高",
-          "change": -3.91
+          "change": 3.29
         },
         "avgDuration": {
-          "value": 4,
+          "value": 14,
           "level": "偏短",
-          "change": -55.56
+          "change": 250
         },
         "pvPerUv": {
-          "value": 1.2,
+          "value": 1.22,
           "level": "一般"
         }
       },
@@ -112,11 +112,11 @@
         "uvTrend": "下降",
         "pvTrend": "下降",
         "svTrend": "下降",
-        "avgUv": 226.36,
-        "avgPv": 240,
-        "todayUvVsAvg": -80.56,
-        "todayPvVsAvg": -77.92,
-        "daysAnalyzed": 11
+        "avgUv": 216.17,
+        "avgPv": 230.58,
+        "todayUvVsAvg": -51.89,
+        "todayPvVsAvg": -44.92,
+        "daysAnalyzed": 12
       },
       "history": [
         {
@@ -239,27 +239,38 @@
           "avgDuration": 4,
           "pvPerUv": 1.2,
           "date": "2026-10-17"
+        },
+        {
+          "uv": 104,
+          "pv": 127,
+          "sv": 113,
+          "ip": 88,
+          "newUser": 98,
+          "bounceRate": 94.69,
+          "avgDuration": 14,
+          "pvPerUv": 1.22,
+          "date": "2026-10-18"
         }
       ],
       "overallGrade": "待优化",
       "aiReport": {
-        "summary": "博客 今日 UV 44，PV 53，较10月15日下降 48.8%，综合质量评级为「待优化」，近期趋势承压。",
+        "summary": "博客 今日 UV 104，PV 127，较10月17日增长 136.4%，综合质量评级为「待优化」，近期趋势承压。",
         "keyFindings": [
           {
             "icon": "📉",
-            "text": "UV 呈下降趋势，日均 UV 226，今日低于均值 80.6%"
+            "text": "UV 呈下降趋势，日均 UV 216，今日低于均值 51.9%"
           },
           {
             "icon": "🎯",
-            "text": "跳出率 91.7%，评级：偏高"
+            "text": "跳出率 94.7%，评级：偏高"
           },
           {
             "icon": "⏱️",
-            "text": "平均访问时长 4秒，评级：偏短"
+            "text": "平均访问时长 14秒，评级：偏短"
           },
           {
             "icon": "📄",
-            "text": "人均浏览 1.20 页，评级：一般"
+            "text": "人均浏览 1.22 页，评级：一般"
           }
         ],
         "recommendations": [
@@ -282,21 +293,20 @@
             "priority": "medium"
           },
           {
-            "type": "alert",
-            "title": "流量大幅下降",
-            "detail": "今日 UV 较10月15日下降 48.8%，建议检查服务器状态、推广渠道和搜索引擎排名，及时排查原因。",
-            "priority": "high"
+            "type": "info",
+            "title": "流量大幅增长",
+            "detail": "今日 UV 较10月17日增长 136.4%，请关注增长来源并分析是否有推广活动或异常流量，把握增长机会。",
+            "priority": "medium"
           }
         ],
         "deepAnalysis": {
-          "trafficPattern": "近期 UV 趋势整体呈「下降」态势，日均 UV 约 226。今日 UV 低于近 11 天均值 80.6%，需关注流量下滑原因。PV 趋势同样呈「下降」，与 UV 趋势基本一致，说明流量变化主要由访客数驱动。",
-          "userBehavior": "用户跳出率为 91.7%，处于「偏高」水平。平均访问时长 4 秒，评级「偏短」。人均浏览页数 1.20 页，评级「一般」。用户粘性较弱，建议从内容质量和页面体验两方面入手优化。",
+          "trafficPattern": "近期 UV 趋势整体呈「下降」态势，日均 UV 约 216。今日 UV 低于近 12 天均值 51.9%，需关注流量下滑原因。PV 趋势同样呈「下降」，与 UV 趋势基本一致，说明流量变化主要由访客数驱动。",
+          "userBehavior": "用户跳出率为 94.7%，处于「偏高」水平。平均访问时长 14 秒，评级「偏短」。人均浏览页数 1.22 页，评级「一般」。用户粘性较弱，建议从内容质量和页面体验两方面入手优化。",
           "growthDrivers": "流量面临下滑压力，需排查是否有内容更新频率下降、搜索引擎排名波动或竞品分流等因素。历史最高 UV 为 863（2026-10-13），当前与峰值有较大差距，有回升空间。",
           "riskPoints": [
             "跳出率偏高，用户留存能力不足",
             "访问时长偏短，内容吸引力有待提升",
-            "UV 趋势下降，需警惕持续下滑风险",
-            "今日流量骤降，建议紧急排查原因"
+            "UV 趋势下降，需警惕持续下滑风险"
           ],
           "actionPlan": [
             "优化首页和落地页加载速度、增加热门文章和相关推荐模块、排查流量下降原因，检查 SEO 和渠道数据",
@@ -310,6 +320,17 @@
     {
       "name": "壁纸网站",
       "today": {
+        "uv": 92,
+        "pv": 107,
+        "sv": 95,
+        "ip": 58,
+        "newUser": 91,
+        "bounceRate": 91.58,
+        "avgDuration": 22,
+        "pvPerUv": 1.16
+      },
+      "todayDate": "2026-10-18",
+      "yesterday": {
         "uv": 22,
         "pv": 30,
         "sv": 22,
@@ -319,62 +340,51 @@
         "avgDuration": 67,
         "pvPerUv": 1.36
       },
-      "todayDate": "2026-10-17",
-      "yesterday": {
-        "uv": 45,
-        "pv": 56,
-        "sv": 46,
-        "ip": 38,
-        "newUser": 41,
-        "bounceRate": 86.96,
-        "avgDuration": 28,
-        "pvPerUv": 1.24
-      },
-      "compareDate": "2026-10-15",
+      "compareDate": "2026-10-17",
       "compare": {
-        "uvChange": -51.11,
-        "pvChange": -46.43,
-        "svChange": -52.17,
-        "ipChange": -47.37,
-        "newUserChange": -51.22
+        "uvChange": 318.18,
+        "pvChange": 256.67,
+        "svChange": 331.82,
+        "ipChange": 190,
+        "newUserChange": 355
       },
       "cumulative": {
-        "monthUv": 342,
-        "monthPv": 1650,
-        "monthSv": 369,
-        "monthIp": 313,
-        "monthNewUserCount": 317,
-        "monthBounceRate": 85.09,
-        "monthAvgDuration": 135,
-        "totalUv": 5154,
-        "totalPv": 7863,
-        "totalSv": 5396,
-        "totalIp": 4771,
-        "totalNewUserCount": 4505,
-        "totalBounceRate": 85.01,
+        "monthUv": 433,
+        "monthPv": 1754,
+        "monthSv": 463,
+        "monthIp": 368,
+        "monthNewUserCount": 407,
+        "monthBounceRate": 86.83,
+        "monthAvgDuration": 112,
+        "totalUv": 5245,
+        "totalPv": 7967,
+        "totalSv": 5490,
+        "totalIp": 4826,
+        "totalNewUserCount": 4595,
+        "totalBounceRate": 85.15,
         "totalAvgDuration": 44,
-        "topUv": 70,
+        "topUv": 92,
         "topPv": 363,
-        "topSv": 74,
+        "topSv": 95,
         "topIp": 67,
-        "topUvDate": "2024-05-11",
+        "topUvDate": "2026-10-18",
         "topPvDate": "2026-10-05",
-        "topSvDate": "2024-05-11",
+        "topSvDate": "2026-10-18",
         "topIpDate": "2024-05-11"
       },
       "quality": {
         "bounceRate": {
-          "value": 90.91,
+          "value": 91.58,
           "level": "偏高",
-          "change": 4.54
+          "change": 0.74
         },
         "avgDuration": {
-          "value": 67,
-          "level": "良好",
-          "change": 139.29
+          "value": 22,
+          "level": "偏短",
+          "change": -67.16
         },
         "pvPerUv": {
-          "value": 1.36,
+          "value": 1.16,
           "level": "一般"
         }
       },
@@ -382,11 +392,11 @@
         "uvTrend": "上升",
         "pvTrend": "下降",
         "svTrend": "上升",
-        "avgUv": 23.45,
-        "avgPv": 86.82,
-        "todayUvVsAvg": -6.18,
-        "todayPvVsAvg": -65.45,
-        "daysAnalyzed": 11
+        "avgUv": 29.17,
+        "avgPv": 88.5,
+        "todayUvVsAvg": 215.39,
+        "todayPvVsAvg": 20.9,
+        "daysAnalyzed": 12
       },
       "history": [
         {
@@ -509,27 +519,38 @@
           "avgDuration": 67,
           "pvPerUv": 1.36,
           "date": "2026-10-17"
+        },
+        {
+          "uv": 92,
+          "pv": 107,
+          "sv": 95,
+          "ip": 58,
+          "newUser": 91,
+          "bounceRate": 91.58,
+          "avgDuration": 22,
+          "pvPerUv": 1.16,
+          "date": "2026-10-18"
         }
       ],
-      "overallGrade": "一般",
+      "overallGrade": "待优化",
       "aiReport": {
-        "summary": "壁纸网站 今日 UV 22，PV 30，较10月15日下降 51.1%，综合质量评级为「一般」，近期趋势向好。",
+        "summary": "壁纸网站 今日 UV 92，PV 107，较10月17日增长 318.2%，综合质量评级为「待优化」，近期趋势向好。",
         "keyFindings": [
           {
             "icon": "📈",
-            "text": "UV 呈上升趋势，日均 UV 23，今日高于均值 -6.2%"
+            "text": "UV 呈上升趋势，日均 UV 29，今日高于均值 215.4%"
           },
           {
             "icon": "🎯",
-            "text": "跳出率 90.9%，评级：偏高"
+            "text": "跳出率 91.6%，评级：偏高"
           },
           {
             "icon": "⏱️",
-            "text": "平均访问时长 67秒，评级：良好"
+            "text": "平均访问时长 22秒，评级：偏短"
           },
           {
             "icon": "📄",
-            "text": "人均浏览 1.36 页，评级：一般"
+            "text": "人均浏览 1.16 页，评级：一般"
           }
         ],
         "recommendations": [
@@ -540,10 +561,10 @@
             "priority": "high"
           },
           {
-            "type": "info",
-            "title": "深化用户参与度",
-            "detail": "访问时长处于良好水平，用户愿意花时间阅读内容。建议增加评论、收藏、分享等互动功能，进一步提升参与感。",
-            "priority": "low"
+            "type": "warning",
+            "title": "提升访问时长",
+            "detail": "用户停留时间偏短，内容吸引力不足。建议增加相关推荐、优化内容结构、提升页面互动性和视觉吸引力。",
+            "priority": "high"
           },
           {
             "type": "info",
@@ -552,34 +573,34 @@
             "priority": "medium"
           },
           {
-            "type": "alert",
-            "title": "流量大幅下降",
-            "detail": "今日 UV 较10月15日下降 51.1%，建议检查服务器状态、推广渠道和搜索引擎排名，及时排查原因。",
-            "priority": "high"
+            "type": "info",
+            "title": "流量大幅增长",
+            "detail": "今日 UV 较10月17日增长 318.2%，请关注增长来源并分析是否有推广活动或异常流量，把握增长机会。",
+            "priority": "medium"
           }
         ],
         "deepAnalysis": {
-          "trafficPattern": "近期 UV 趋势整体呈「上升」态势，日均 UV 约 23。今日 UV 低于近 11 天均值 6.2%，需关注流量下滑原因。PV 趋势同样呈「下降」，与 UV 趋势存在分化，说明用户浏览行为也在发生变化。",
-          "userBehavior": "用户跳出率为 90.9%，处于「偏高」水平。平均访问时长 67 秒，评级「良好」。人均浏览页数 1.36 页，评级「一般」。",
-          "growthDrivers": "流量增长势头良好，增长可能来源于内容积累效应、SEO 优化见效或推广活动。历史最高 UV 为 70（2024-05-11），建议复盘当时的增长经验。",
+          "trafficPattern": "近期 UV 趋势整体呈「上升」态势，日均 UV 约 29。今日 UV 高于近 12 天均值 215.4%，表现优于平均水平。PV 趋势同样呈「下降」，与 UV 趋势存在分化，说明用户浏览行为也在发生变化。",
+          "userBehavior": "用户跳出率为 91.6%，处于「偏高」水平。平均访问时长 22 秒，评级「偏短」。人均浏览页数 1.16 页，评级「一般」。用户粘性较弱，建议从内容质量和页面体验两方面入手优化。",
+          "growthDrivers": "流量增长势头良好，增长可能来源于内容积累效应、SEO 优化见效或推广活动。历史最高 UV 为 92（2026-10-18），建议复盘当时的增长经验。",
           "riskPoints": [
             "跳出率偏高，用户留存能力不足",
-            "今日流量骤降，建议紧急排查原因"
+            "访问时长偏短，内容吸引力有待提升"
           ],
           "actionPlan": [
-            "优化首页和落地页加载速度",
+            "优化首页和落地页加载速度、增加热门文章和相关推荐模块",
             "优化内链结构，提升用户浏览深度、分析高流量页面特征，复制成功经验、丰富内容形式，增加互动元素",
             "建立系统化的内容运营体系、拓展流量渠道，降低单一渠道依赖、布局用户增长和转化漏斗优化"
           ]
         },
-        "trendOutlook": "未来一段时间流量有望继续保持增长态势，建议乘胜追击，加大内容产出和推广投入，向历史最高 UV 70 发起冲击。"
+        "trendOutlook": "未来一段时间流量有望继续保持增长态势，建议乘胜追击，加大内容产出和推广投入，向历史最高 UV 92 发起冲击。"
       }
     }
   ],
   "dateRange": {
     "start": "2026-10-07",
-    "end": "2026-10-17",
-    "totalDays": 11,
+    "end": "2026-10-18",
+    "totalDays": 12,
     "allDates": [
       "2026-10-07",
       "2026-10-08",
@@ -591,13 +612,14 @@
       "2026-10-14",
       "2026-10-15",
       "2026-10-16",
-      "2026-10-17"
+      "2026-10-17",
+      "2026-10-18"
     ]
   },
   "rawSiteData": [
     {
       "site": "博客",
-      "recordCount": 11,
+      "recordCount": 12,
       "records": [
         {
           "date": "2026-10-07",
@@ -1258,12 +1280,72 @@
             "totalBounceRate": 0.9538,
             "totalAvgDuration": 17493.036
           }
+        },
+        {
+          "date": "2026-10-18",
+          "data": {
+            "curTime": "2026/10/19-2026/10/19",
+            "curUv": 5,
+            "curNewUserCount": 3,
+            "curSv": 5,
+            "curPv": 5,
+            "curIp": 5,
+            "curBounceRate": 1,
+            "curAvgDuration": 0,
+            "beforeTime": "2026/10/18-2026/10/18",
+            "beforeUv": 104,
+            "beforeNewUserCount": 98,
+            "beforeSv": 113,
+            "beforePv": 127,
+            "beforeIp": 88,
+            "beforeBounceRate": 0.9469,
+            "beforeAvgDuration": 14086.1504,
+            "predictTime": "2026/10/19-2026/10/19",
+            "predictUv": 98,
+            "predictNewUserCount": 91,
+            "predictSv": 105,
+            "predictPv": 117,
+            "predictIp": 83,
+            "yesterdayCurUv": 11,
+            "yesterdayCurNewUserCount": 10,
+            "yesterdayCurSv": 13,
+            "yesterdayCurPv": 15,
+            "yesterdayCurIp": 10,
+            "topUv": 863,
+            "topTimeUv": "2026-10-13",
+            "topNewUserCount": 854,
+            "topTimeNewUserCount": "2026-10-13",
+            "topSv": 875,
+            "topTimeSv": "2026-10-13",
+            "topPv": 906,
+            "topTimePv": "2026-10-13",
+            "topIp": 599,
+            "topTimeIp": "2026-10-13",
+            "topBounceRate": 2,
+            "topTimeBounceRate": "2026-07-26",
+            "topAvgDuration": 397247.4167,
+            "topTimeAvgDuration": "2026-07-24",
+            "monthUv": 4293,
+            "monthNewUserCount": 4235,
+            "monthSv": 4338,
+            "monthPv": 4553,
+            "monthIp": 3724,
+            "monthBounceRate": 0.9696,
+            "monthAvgDuration": 4780.4802,
+            "totalUv": 28071,
+            "totalNewUserCount": 26722,
+            "totalSv": 28832,
+            "totalPv": 31044,
+            "totalIp": 22938,
+            "totalBounceRate": 0.9538,
+            "totalAvgDuration": 17460.5635
+          }
         }
       ]
     },
     {
       "site": "壁纸网站",
-      "recordCount": 11,
+      "recordCount": 12,
       "records": [
         {
           "date": "2026-10-07",
@@ -1923,6 +2005,66 @@
             "totalIp": 4771,
             "totalBounceRate": 0.8501,
             "totalAvgDuration": 44485.5519
+          }
+        },
+        {
+          "date": "2026-10-18",
+          "data": {
+            "curTime": "2026/10/19-2026/10/19",
+            "curUv": 16,
+            "curNewUserCount": 16,
+            "curSv": 16,
+            "curPv": 16,
+            "curIp": 12,
+            "curBounceRate": 1,
+            "curAvgDuration": 0,
+            "beforeTime": "2026/10/18-2026/10/18",
+            "beforeUv": 92,
+            "beforeNewUserCount": 91,
+            "beforeSv": 95,
+            "beforePv": 107,
+            "beforeIp": 58,
+            "beforeBounceRate": 0.9158,
+            "beforeAvgDuration": 22163.4947,
+            "predictTime": "2026/10/19-2026/10/19",
+            "predictUv": 91,
+            "predictNewUserCount": 90,
+            "predictSv": 94,
+            "predictPv": 104,
+            "predictIp": 55,
+            "yesterdayCurUv": 17,
+            "yesterdayCurNewUserCount": 17,
+            "yesterdayCurSv": 17,
+            "yesterdayCurPv": 19,
+            "yesterdayCurIp": 15,
+            "topUv": 92,
+            "topTimeUv": "2026-10-18",
+            "topNewUserCount": 91,
+            "topTimeNewUserCount": "2026-10-18",
+            "topSv": 95,
+            "topTimeSv": "2026-10-18",
+            "topPv": 363,
+            "topTimePv": "2026-10-05",
+            "topIp": 67,
+            "topTimeIp": "2024-05-11",
+            "topBounceRate": 1.5,
+            "topTimeBounceRate": "2026-07-26",
+            "topAvgDuration": 1302940,
+            "topTimeAvgDuration": "2025-05-25",
+            "monthUv": 433,
+            "monthNewUserCount": 407,
+            "monthSv": 463,
+            "monthPv": 1754,
+            "monthIp": 368,
+            "monthBounceRate": 0.8683,
+            "monthAvgDuration": 112393.9136,
+            "totalUv": 5245,
+            "totalNewUserCount": 4595,
+            "totalSv": 5490,
+            "totalPv": 7967,
+            "totalIp": 4826,
+            "totalBounceRate": 0.8515,
+            "totalAvgDuration": 44101.6661
           }
         }
       ]
