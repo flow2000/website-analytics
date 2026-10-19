@@ -49,6 +49,8 @@
 
 ### 1. 创建 Cloudflare API Token
 
+> 📖 详细图文步骤、命令行验证方法与常见报错对照，见 [TOKEN.md](file:///c:/Users/A/Desktop/projects/website-analytics/server/TOKEN.md)（Token 配置指南）
+
 1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/?to=/:account/api-tokens) → **Create Token** → **Custom token**
 2. 权限配置（二选一）：
    - **方案 A（推荐）**：`Zone → Analytics → Read` + `Zone → Zone → Read`，Zone Resources 选择 `All zones`（或指定站点）——自动发现站点
