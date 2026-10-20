@@ -21,11 +21,13 @@
 npm install
 npm run dev              # http://localhost:8787（wrangler dev --local，D1 本地模拟、GraphQL 真实调用）
 
-# 部署（敏感变量以 Worker Secret 方式设置，不写入 wrangler.jsonc）
+# 部署（敏感变量以 Worker Secret 方式设置，不写入 wrangler.jsonc；账户 ID 经环境变量传入）
+export CLOUDFLARE_ACCOUNT_ID=你的账户ID
 wrangler d1 create website-analytics-dev-db   # 首次建库（需要 D1 Edit 权限；或将输出 database_id 填入 wrangler.jsonc）
 wrangler d1 execute website-analytics-dev-db --remote --file=src/schema.sql
 npx wrangler deploy
 echo "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN
+echo "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
 echo "$EXPORT_KEY" | npx wrangler secret put EXPORT_KEY
 # 推送 dev 分支即可由 GitHub Actions 自动部署（含 secret 写入）
 ```
