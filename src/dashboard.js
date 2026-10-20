@@ -593,12 +593,12 @@ async function loadUsage() {
     let html = "";
     if (u.workers && u.workers.configured) {
       const pct = u.workers.todayRequests / u.workers.requestsPerDay * 100;
-      html += "<div class=quota-card><div class=q-label>⚡ Workers 请求</div><div class=q-row><span class=q-val>" + fmtCompact(u.workers.todayRequests) + "</span><span class=q-limit> / 每日 " + fmtCompact(u.workers.requestsPerDay) + "</span></div><div class=\"q-bar" + (pct > 80 ? " q-danger" : "") + "\"><i style=\"width:" + Math.min(pct, 100).toFixed(1) + "%\"></i></div></div>";
+      html += "<div class=quota-card><div class=q-label>⚡ Workers 请求</div><div class=q-row><span class=q-val>" + fmtCompact(u.workers.todayRequests) + "</span><span class=q-limit> / 每日 " + fmtCompact(u.workers.requestsPerDay) + "</span></div><div class='q-bar" + (pct > 80 ? " q-danger" : "") + "'><i style='width:" + Math.min(pct, 100).toFixed(1) + "%'></i></div></div>";
     }
     if (u.d1 && u.d1.configured) {
       const reads = u.d1.todayReadQueries || 0, writes = u.d1.todayWriteQueries || 0;
-      html += "<div class=quota-card><div class=q-label>🗄️ D1 读查询</div><div class=q-row><span class=q-val>" + fmtCompact(reads) + "</span><span class=q-limit> 次查询（今日）</span></div><div class=q-bar><i style=\"width:100%\"></i></div><div class=q-limit>免费档上限 500 万行读/日（行数不可见，展示查询次数）</div></div>";
-      html += "<div class=quota-card><div class=q-label>✍️ D1 写查询</div><div class=q-row><span class=q-val>" + fmtCompact(writes) + "</span><span class=q-limit> 次查询（今日）</span></div><div class=q-bar><i style=\"width:100%\"></i></div><div class=q-limit>免费档上限 10 万行写/日</div></div>";
+      html += "<div class=quota-card><div class=q-label>🗄️ D1 读查询</div><div class=q-row><span class=q-val>" + fmtCompact(reads) + "</span><span class=q-limit> 次查询（今日）</span></div><div class=q-bar><i style='width:100%'></i></div><div class=q-limit>免费档上限 500 万行读/日（行数不可见，展示查询次数）</div></div>";
+      html += "<div class=quota-card><div class=q-label>✍️ D1 写查询</div><div class=q-row><span class=q-val>" + fmtCompact(writes) + "</span><span class=q-limit> 次查询（今日）</span></div><div class=q-bar><i style='width:100%'></i></div><div class=q-limit>免费档上限 10 万行写/日</div></div>";
     }
     if (html) {
       $("quotaCards").innerHTML = html;
@@ -641,7 +641,7 @@ async function renderAdminSites() {
     const el = $("adminSiteList");
     el.innerHTML = d.sites.length === 0
       ? '<div class="hint">暂无网站，输入域名添加或点击「同步」从 Cloudflare 导入。</div>'
-      : d.sites.map(s => "<div class=admin-site-item><span class=dom>🌐 " + s.name + "</span><span style='color:var(--text-dim);font-size:12px'>" + (s.zoneId ? s.zoneId.slice(0, 8) : "未解析") + "</span><button class=del data-domain=\"" + s.name + "\" title=删除>✕</button></div>").join("");
+      : d.sites.map(s => "<div class=admin-site-item><span class=dom>🌐 " + s.name + "</span><span style='color:var(--text-dim);font-size:12px'>" + (s.zoneId ? s.zoneId.slice(0, 8) : "未解析") + "</span><button class=del data-domain='" + s.name + "' title=删除>✕</button></div>").join("");
     el.querySelectorAll(".del").forEach(b => b.addEventListener("click", () => delAdminSite(b.dataset.domain)));
   } catch (e) { showError("站点列表加载失败：" + e.message); }
 }
@@ -724,7 +724,7 @@ function renderSiteSelect() {
   const sel = $("siteSelect");
   const total = STATE.sites.length;
   let html = "<option value=all>🌐 全部站点 (" + total + ")</option>";
-  for (const s of STATE.sites) html += "<option value=\"" + s.name + "\">" + s.name + "</option>";
+  for (const s of STATE.sites) html += "<option value='" + s.name + "'>" + s.name + "</option>";
   sel.innerHTML = html;
   sel.value = STATE.site;
 }
@@ -782,7 +782,7 @@ function renderKpis() {
     { label: "WAF 拦截", icon: "🚧", value: fmtCompact(t.wafEvents), sub: "防火墙事件", color: "#f59e0b" },
   ];
   $("kpiGrid").innerHTML = cards.map(c =>
-    "<div class=kpi-card style=\"--kc:" + c.color + "\"><div class=kpi-label>" + c.icon + " " + c.label + "</div><div class=kpi-value style=\"color:" + c.color + "\">" + c.value + "</div><div class=kpi-sub>" + c.sub + "</div></div>").join("");
+    "<div class=kpi-card style='--kc:" + c.color + "'><div class=kpi-label>" + c.icon + " " + c.label + "</div><div class=kpi-value style='color:" + c.color + "'>" + c.value + "</div><div class=kpi-sub>" + c.sub + "</div></div>").join("");
 }
 
 /* ==================== 渲染：图表 ==================== */
@@ -810,7 +810,7 @@ const TREND_METRICS = [
 ];
 function renderTrendChips() {
   $("trendChips").innerHTML = TREND_METRICS.map(m =>
-    "<button class=\"chip " + (STATE.trendMetrics.has(m.key) ? "active" : "") + "\" data-metric=\"" + m.key + "\" style=\"--cc:" + m.color + "\"><span class=dot style=\"--cc:" + m.color + "\"></span>" + m.label + "</button>").join("");
+    "<button class='chip " + (STATE.trendMetrics.has(m.key) ? "active" : "") + "' data-metric='" + m.key + "' style='--cc:" + m.color + "'><span class=dot style='--cc:" + m.color + "'></span>" + m.label + "</button>").join("");
 }
 $("trendChips").addEventListener("click", e => {
   const chip = e.target.closest("button[data-metric]");
@@ -884,10 +884,10 @@ function renderDonuts() {
 /* ==================== 渲染：排行列表 ==================== */
 function renderRankList(elId, items, opts) {
   const el = $(elId);
-  if (!items || !items.length) { el.innerHTML = "<div class=empty-state style=\"padding:36px 10px\">暂无数据</div>"; return; }
+  if (!items || !items.length) { el.innerHTML = "<div class=empty-state style='padding:36px 10px'>暂无数据</div>"; return; }
   const max = Math.max(...items.map(i => i.value), 1);
   el.innerHTML = items.map((i, idx) =>
-    "<div class=rank-item><div class=meta><span>" + (opts.icon ? opts.icon(i, idx) + " " : "") + opts.name(i) + (opts.sub ? " <span style=\"color:var(--text-dim);font-size:12px\">" + opts.sub(i) + "</span>" : "") + "</span><span class=val>" + opts.value(i) + (opts.pct ? " · " + fmtPct((i.value / opts.pct) * 100) : "") + "</span></div><div class=rank-bar-wrap><div class=rank-bar style=\"width:" + (i.value / max * 100).toFixed(1) + "%;opacity:" + (1 - idx * 0.06) + "\"></div></div></div>").join("");
+    "<div class=rank-item><div class=meta><span>" + (opts.icon ? opts.icon(i, idx) + " " : "") + opts.name(i) + (opts.sub ? " <span style='color:var(--text-dim);font-size:12px'>" + opts.sub(i) + "</span>" : "") + "</span><span class=val>" + opts.value(i) + (opts.pct ? " · " + fmtPct((i.value / opts.pct) * 100) : "") + "</span></div><div class=rank-bar-wrap><div class=rank-bar style='width:" + (i.value / max * 100).toFixed(1) + "%;opacity:" + (1 - idx * 0.06) + "'></div></div></div>").join("");
 }
 function renderBreakdowns() {
   const b = STATE.stats.breakdowns || {};
@@ -931,9 +931,9 @@ const GRADE_BADGE = { "优秀": "b-success", "良好": "b-success", "一般": "b
 const REC_ICON = { success: "✅", warning: "⚠️", info: "💡" };
 function renderSiteAnalysis(site) {
   const a = site.analysis || {};
-  return "<div class=report-summary><b>" + site.name + "</b><span class=\"badge " + (GRADE_BADGE[a.grade] || "b-info") + " report-grade\">" + (a.grade || "未评级") + "</span><br>" + (a.summary || "暂无总结") + "</div>"
+  return "<div class=report-summary><b>" + site.name + "</b><span class='badge " + (GRADE_BADGE[a.grade] || "b-info") + " report-grade'>" + (a.grade || "未评级") + "</span><br>" + (a.summary || "暂无总结") + "</div>"
     + (a.keyFindings && a.keyFindings.length ? "<div class=findings>" + a.keyFindings.map(f => "<div class=finding><span>" + (f.icon || "•") + "</span><span>" + f.text + "</span></div>").join("") + "</div>" : "")
-    + (a.recommendations && a.recommendations.length ? "<div class=rec-grid>" + a.recommendations.map(r => "<div class=\"rec-card rec-" + (r.type || "info") + "\"><div class=rec-title>" + (REC_ICON[r.type] || "💡") + " " + (r.title || "") + "<span class=\"badge b-info\" style=margin-left:auto>" + ({ high: "高优先级", medium: "中优先级", low: "低优先级" })[r.priority] || "" + "</span></div><div class=rec-detail>" + (r.detail || "") + "</div></div>").join("") + "</div>" : "")
+    + (a.recommendations && a.recommendations.length ? "<div class=rec-grid>" + a.recommendations.map(r => "<div class='rec-card rec-" + (r.type || "info") + "'><div class=rec-title>" + (REC_ICON[r.type] || "💡") + " " + (r.title || "") + "<span class='badge b-info' style=margin-left:auto>" + (({ high: "高优先级", medium: "中优先级", low: "低优先级" })[r.priority] || "") + "</span></div><div class=rec-detail>" + (r.detail || "") + "</div></div>").join("") + "</div>" : "")
     + (a.deepAnalysis ? "<div class=deep-grid>"
       + (a.deepAnalysis.trafficPattern ? "<div class=deep-item><h4>🔄 流量规律</h4><p>" + a.deepAnalysis.trafficPattern + "</p></div>" : "")
       + (a.deepAnalysis.userBehavior ? "<div class=deep-item><h4>👤 用户行为</h4><p>" + a.deepAnalysis.userBehavior + "</p></div>" : "")
@@ -945,8 +945,8 @@ function renderSiteAnalysis(site) {
 }
 function renderOverallAnalysis(o) {
   return "<div class=report-summary>" + (o.summary || "暂无总结") + "</div>"
-    + (o.siteRanking && o.siteRanking.length ? "<div class=site-chip-row>" + o.siteRanking.map((s, i) => "<span class=chip style=\"--cc:" + PALETTE[i % PALETTE.length] + ";color:var(--text)\"><span class=dot style=\"--cc:" + PALETTE[i % PALETTE.length] + "\"></span>" + s.name + " · " + (s.note || "") + "</span>").join("") + "</div>" : "")
-    + (o.strategicRecommendations && o.strategicRecommendations.length ? "<div class=rec-grid>" + o.strategicRecommendations.map(r => "<div class=\"rec-card rec-info\"><div class=rec-title>🎯 " + (r.target || "") + " · " + (r.strategy || "") + "</div><div class=rec-detail><b style=color:var(--text)>重点：</b>" + (r.focus || "") + "</div>" + (r.actions && r.actions.length ? "<ul style=\"padding-left:18px;margin-top:8px;display:flex;flex-direction:column;gap:3px\">" + r.actions.map(a => "<li style=\"font-size:13.5px;color:var(--text-dim)\">" + a + "</li>").join("") + "</ul>" : "") + "</div>").join("") + "</div>" : "");
+    + (o.siteRanking && o.siteRanking.length ? "<div class=site-chip-row>" + o.siteRanking.map((s, i) => "<span class=chip style='--cc:" + PALETTE[i % PALETTE.length] + ";color:var(--text)'><span class=dot style='--cc:" + PALETTE[i % PALETTE.length] + "'></span>" + s.name + " · " + (s.note || "") + "</span>").join("") + "</div>" : "")
+    + (o.strategicRecommendations && o.strategicRecommendations.length ? "<div class=rec-grid>" + o.strategicRecommendations.map(r => "<div class='rec-card rec-info'><div class=rec-title>🎯 " + (r.target || "") + " · " + (r.strategy || "") + "</div><div class=rec-detail><b style=color:var(--text)>重点：</b>" + (r.focus || "") + "</div>" + (r.actions && r.actions.length ? "<ul style='padding-left:18px;margin-top:8px;display:flex;flex-direction:column;gap:3px'>" + r.actions.map(a => "<li style='font-size:13.5px;color:var(--text-dim)'>" + a + "</li>").join("") + "</ul>" : "") + "</div>").join("") + "</div>" : "");
 }
 function renderReport() {
   const report = STATE.report;
