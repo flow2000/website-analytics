@@ -168,7 +168,7 @@ query ZoneHourlyGroups($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Ti
   }
 }`;
 
-/** 设备类型分布（Adaptive 采样） */
+/** 设备类型分布（Adaptive 采样，按请求数排序） */
 export const Q_DEVICES = `
 query ZoneDeviceTypes($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Time) {
   viewer {
@@ -177,9 +177,29 @@ query ZoneDeviceTypes($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Tim
       httpRequestsAdaptiveGroups(
         limit: 10
         filter: { datetime_geq: $datetimeGeq, datetime_lt: $datetimeLt }
+        orderBy: [count_DESC]
       ) {
         count
         dimensions { deviceType: clientDeviceType }
+      }
+    }
+  }
+}`;
+
+/** 热门页面（Adaptive 采样，按请求数排序 Top N） */
+export const Q_TOP_PATHS = `
+query ZoneTopPaths($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Time) {
+  viewer {
+    zones(filter: { zoneTag_in: $zoneTags }) {
+      zoneTag
+      httpRequestsAdaptiveGroups(
+        limit: 10
+        filter: { datetime_geq: $datetimeGeq, datetime_lt: $datetimeLt }
+        orderBy: [count_DESC]
+      ) {
+        count
+        dimensions { path: clientRequestPath }
+        sum { pageViews edgeResponseBytes }
       }
     }
   }
@@ -270,6 +290,33 @@ export async function fetchDeviceGroups(env, zones, datetimeGeq, datetimeLt) {
   } catch (e) {
     console.error('设备类型查询失败（已降级）:', e.message);
     return zones.map(z => ({ zoneTag: z.zoneId, httpRequestsAdaptiveGroups: [] }));
+  }
+}
+
+/** 查询热门页面（跨 zone 合并 Top 10；失败返回空） */
+export async function fetchTopPages(env, zones, datetimeGeq, datetimeLt) {
+  try {
+    const zoneResults = await runZoneBatched(zones, zoneTags =>
+      graphqlRequest(env, Q_TOP_PATHS, { zoneTags, datetimeGeq, datetimeLt }).then(d => d.viewer.zones || [])
+    );
+    const merged = {};
+    for (const zone of zoneResults) {
+      for (const g of zone.httpRequestsAdaptiveGroups || []) {
+        const path = g.dimensions && g.dimensions.path;
+        if (!path) continue;
+        if (!merged[path]) merged[path] = { path, requests: 0, pageViews: 0, bytes: 0 };
+        const m = merged[path];
+        m.requests += g.count || 0;
+        m.pageViews += (g.sum && g.sum.pageViews) || 0;
+        m.bytes += (g.sum && g.sum.edgeResponseBytes) || 0;
+      }
+    }
+    return Object.values(merged)
+      .sort((a, b) => b.requests - a.requests)
+      .slice(0, 10);
+  } catch (e) {
+    console.error('热门页面查询失败（已降级）:', e.message);
+    return [];
   }
 }
 

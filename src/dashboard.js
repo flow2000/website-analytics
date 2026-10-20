@@ -5,6 +5,7 @@ export default `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cloudflare 网站流量分析 (dev)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6821f'/%3E%3Cpath d='M36 6 14 38h14l-4 20 24-34H32l4-18z' fill='%23fff'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
@@ -213,6 +214,17 @@ table.compare td { font-variant-numeric: tabular-nums; }
 .qr-fallback { font-size: 12.5px; color: var(--text-dim); word-break: break-all; margin: 6px 0; }
 footer { text-align: center; color: var(--text-dim); font-size: 12.5px; margin-top: 34px; line-height: 2; }
 footer a { color: var(--text-dim); }
+/* ===== 交互反馈 ===== */
+.btn:active { transform: translateY(0) scale(0.98); }
+.rank-item { padding: 4px 6px; margin: -4px -6px; border-radius: 10px; transition: background 0.15s; }
+.rank-item:hover { background: var(--bg-hover); }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.path-name { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; word-break: break-all; }
+.rank-no { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-dim); background: var(--bg-elev); border-radius: 6px; }
+.medal { display: inline-flex; width: 22px; align-items: center; justify-content: center; font-size: 15px; }
+.modal { animation: pop 0.18s ease; }
+@keyframes pop { from { opacity: 0; transform: scale(0.96) translateY(6px); } }
+
 @media (max-width: 640px) {
   .wrap { padding: 18px 14px 40px; }
   .kpi-value { font-size: 24px; }
@@ -339,6 +351,23 @@ footer a { color: var(--text-dim); }
       <div class="rank-list" id="threatList" style="margin-bottom:22px"></div>
       <h4 style="font-size:14px;color:var(--text-dim);margin-bottom:12px">WAF 动作（今日实时）</h4>
       <div class="rank-list" id="wafList"></div>
+    </section>
+  </div>
+
+  <div class="grid-3 row-gap">
+    <section class="card" id="siteRankCard" style="display:none">
+      <div class="card-head">
+        <div class="card-title">🏆 热门站点排行</div>
+        <div class="chips" id="rankChips"></div>
+      </div>
+      <div class="rank-list" id="siteRankList"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">📄 热门页面 Top 10</div>
+        <div class="card-note" id="topPagesNote"></div>
+      </div>
+      <div class="rank-list" id="topPagesList"></div>
     </section>
   </div>
 
@@ -513,7 +542,12 @@ const WAF_ZH = {
 };
 
 /* ==================== 全局状态 ==================== */
-const STATE = { sites: [], site: "all", range: "7d", stats: null, report: null, trendMetrics: new Set(["requests", "pageViews"]), charts: {}, needsAuth: false, authMode: "password" };
+const STATE = { sites: [], site: "all", range: "7d", stats: null, report: null, trendMetrics: new Set(["requests", "pageViews"]), charts: {}, needsAuth: false, authMode: "password", rankMetric: "requests" };
+
+function escapeHtml(s) {
+  const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return String(s === null || s === undefined ? "" : s).replace(/[&<>"']/g, c => map[c]);
+}
 
 function api(url, opts) {
   return fetch(url, opts).then(async res => {
@@ -533,6 +567,19 @@ function apiPost(url, payload) {
 }
 const $ = id => document.getElementById(id);
 function showLoading(on) { $("loadingBar").style.display = on ? "block" : "none"; }
+
+/** 回车确认：输入框内按 Enter 触发对应按钮/回调 */
+function bindEnter(inputId, btnId, handler) {
+  const el = $(inputId);
+  if (!el) return;
+  el.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (btnId && $(btnId)) $(btnId).click();
+      else if (handler) handler();
+    }
+  });
+}
 function showError(msg, hint) {
   const box = $("errorBox");
   if (!msg) { box.style.display = "none"; return; }
@@ -619,6 +666,7 @@ function adminApi(url, payload, method) {
 $("btnAdmin").addEventListener("click", () => {
   $("adminKey").value = adminKey;
   $("adminModal").classList.add("show");
+  setTimeout(() => $("adminKey").focus(), 60);
   if (adminKey) { loadAdminConfig(); renderAdminSites(); }
 });
 $("adminKey").addEventListener("input", e => { adminKey = e.target.value.trim(); sessionStorage.setItem("wa-admin-key", adminKey); });
@@ -926,6 +974,54 @@ function renderCompare() {
   $("compareTable").innerHTML = "<thead><tr><th>站点</th><th>请求数</th><th>浏览量</th><th>独立访客</th><th>流量</th><th>缓存命中</th><th>会话</th><th>WAF</th></tr></thead><tbody>" + rows + "</tbody>";
 }
 
+/* ==================== 渲染：热门站点排行 ==================== */
+const RANK_METRICS = [
+  { key: "requests", label: "请求", color: "#f6821f", fmt: fmtCompact },
+  { key: "pageViews", label: "浏览", color: "#3b82f6", fmt: fmtCompact },
+  { key: "uniques", label: "访客", color: "#8b5cf6", fmt: fmtCompact },
+  { key: "bytes", label: "流量", color: "#06b6d4", fmt: fmtBytes },
+  { key: "visits", label: "会话", color: "#10b981", fmt: fmtCompact },
+];
+
+function renderRankChips() {
+  $("rankChips").innerHTML = RANK_METRICS.map(m =>
+    "<button class='chip " + (STATE.rankMetric === m.key ? "active" : "") + "' data-rank='" + m.key + "' style='--cc:" + m.color + "'><span class=dot style='--cc:" + m.color + "'></span>" + m.label + "</button>").join("");
+}
+
+$("rankChips").addEventListener("click", e => {
+  const chip = e.target.closest("button[data-rank]");
+  if (!chip) return;
+  STATE.rankMetric = chip.dataset.rank;
+  renderRankChips();
+  renderSiteRanking();
+});
+
+function renderSiteRanking() {
+  const perSite = (STATE.stats && STATE.stats.perSite) || [];
+  const card = $("siteRankCard");
+  if (perSite.length < 2) { card.style.display = "none"; return; }
+  card.style.display = "block";
+  const m = RANK_METRICS.find(x => x.key === STATE.rankMetric) || RANK_METRICS[0];
+  const items = perSite.map(s => ({ ...s, value: s.totals[m.key] || 0 })).sort((a, b) => b.value - a.value);
+  const max = Math.max(...items.map(i => i.value), 1);
+  const medal = i => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "<span class=rank-no>" + (i + 1) + "</span>";
+  $("siteRankList").innerHTML = items.map((s, i) =>
+    "<div class=rank-item><div class=meta><span><span class=medal>" + medal(i) + "</span> <b style='font-size:13.5px'>" + escapeHtml(s.name) + "</b></span><span class=val>" + m.fmt(s.value) + "</span></div><div class=rank-bar-wrap><div class=rank-bar style='width:" + (s.value / max * 100).toFixed(1) + "%'></div></div></div>").join("");
+}
+
+/* ==================== 渲染：热门页面 ==================== */
+function renderTopPages() {
+  const b = (STATE.stats && STATE.stats.breakdowns) || {};
+  const pages = b.topPages || [];
+  $("topPagesNote").textContent = pages.length && b.topPagesWindowDays ? "近 " + b.topPagesWindowDays + " 天采样 · 按请求数" : "Adaptive 采样";
+  const items = pages.map(p => ({ ...p, value: p.requests }));
+  renderRankList("topPagesList", items, {
+    name: p => "<span class='path-name'>" + escapeHtml(!p.path || p.path === "/" ? "/（首页）" : p.path) + "</span>",
+    value: p => fmtCompact(p.value),
+    sub: p => "PV " + fmtCompact(p.pageViews || 0) + " · " + fmtBytes(p.bytes || 0),
+  });
+}
+
 /* ==================== 渲染：AI 分析报告 ==================== */
 const GRADE_BADGE = { "优秀": "b-success", "良好": "b-success", "一般": "b-warning", "较差": "b-danger" };
 const REC_ICON = { success: "✅", warning: "⚠️", info: "💡" };
@@ -975,6 +1071,7 @@ $("btnExport").addEventListener("click", () => {
   $("exportSite").value = STATE.site === "all" ? "全部站点（" + STATE.sites.length + " 个）" : STATE.site;
   $("exportModal").classList.add("show");
   $("exportKey").value = "";
+  setTimeout(() => $("exportKey").focus(), 60);
 });
 $("exportCancel").addEventListener("click", () => $("exportModal").classList.remove("show"));
 $("exportModal").addEventListener("click", e => { if (e.target === $("exportModal")) $("exportModal").classList.remove("show"); });
@@ -993,7 +1090,15 @@ $("exportConfirm").addEventListener("click", () => {
 
 /* ==================== 总渲染 ==================== */
 function renderAllCharts() { renderTrendChart(); renderDonuts(); }
-function renderAll() { renderKpis(); renderTrendChips(); renderAllCharts(); renderBreakdowns(); renderCompare(); }
+function renderAll() { renderKpis(); renderTrendChips(); renderRankChips(); renderAllCharts(); renderBreakdowns(); renderCompare(); renderSiteRanking(); renderTopPages(); }
+
+/* ==================== 回车确认绑定 ==================== */
+bindEnter("authCode", "authConfirm");
+bindEnter("exportKey", "exportConfirm");
+bindEnter("siteDomain", "btnAddSite");
+bindEnter("totpCode", "btnTotpVerify");
+bindEnter("newPassword", "btnSaveAccess");
+bindEnter("adminKey", null, () => { if (adminKey) { loadAdminConfig(); renderAdminSites(); } });
 
 /* ==================== 初始化 ==================== */
 async function bootstrap() {
