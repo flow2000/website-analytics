@@ -1,0 +1,25 @@
+// Cloudflare Workers + D1 配置（dev 分支）
+// 部署：wrangler deploy --var CLOUDFLARE_API_TOKEN=xxx --var CLOUDFLARE_ACCOUNT_ID=xxx --var EXPORT_KEY=xxx
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "website-analytics-dev",
+  "main": "src/index.js",
+  "compatibility_date": "2025-10-01",
+  "workers_dev": true,
+  "vars": {
+    "APP_NAME": "Cloudflare 网站流量分析 (dev)"
+  },
+  "triggers": {
+    "crons": ["5 0 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "website-analytics-dev-db",
+      "database_id": "fdca190d-dbc8-4a1a-967a-e9480b1b34f6"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

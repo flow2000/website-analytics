@@ -1,15 +1,20 @@
 {
   "name": "website-analytics-server",
-  "version": "3.0.0",
-  "description": "Cloudflare 网站流量分析系统 - GraphQL Analytics API 实时聚合 + report.json 分析报告（适配 Netlify / Vercel）",
-  "main": "index.js",
-  "scripts": {
-    "dev": "node test-server.js"
-  },
-  "keywords": ["analytics", "cloudflare", "graphql", "serverless", "netlify", "vercel"],
-  "author": "",
-  "license": "MIT",
+  "version": "3.1.0-dev",
+  "description": "Cloudflare 网站流量分析系统（dev 分支：Cloudflare Workers + D1） - GraphQL Analytics API 快照化 + multi-site 仪表盘 + AI 报告",
+  "private": true,
+  "type": "module",
   "engines": {
     "node": ">=18"
+  },
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy",
+    "deploy:vars": "wrangler deploy --var CLOUDFLARE_API_TOKEN:%CLOUDFLARE_API_TOKEN% --var CLOUDFLARE_ACCOUNT_ID:%CLOUDFLARE_ACCOUNT_ID% --var EXPORT_KEY:%EXPORT_KEY%",
+    "d1:db:list": "wrangler d1 list"
+  },
+  "devDependencies": {
+    "wrangler": "^3.114.17"
   }
 }
