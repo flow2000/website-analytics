@@ -17,3 +17,9 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Cloudflare Workers / Wrangler
+.dev.vars
+.wrangler/
+.tools/
+node20/

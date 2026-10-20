@@ -1,10 +1,32 @@
 # Cloudflare API Token 配置指南
 
-本文档说明本项目所需 Cloudflare API Token 的创建、权限选择与环境变量配置。
+> **dev 分支（Workers + D1）** 的权限要求见第一节「dev 分支」；main 分支见原有文档。
 
 ---
 
-## 一、权限要求速查
+## 〇、dev 分支（Workers + D1）权限要求
+
+| 权限 | 用途 | 是否必需 |
+|------|------|:--------:|
+| `Account → Analytics → Read` 或 `Zone → Analytics → Read` | GraphQL Analytics 流量数据、Workers/D1 用量查询 | ✅ |
+| `Account → D1 → Read` | 读取 D1（快照/设置/报告） | ✅ |
+| `Account → D1 → Write` | 写入 D1 快照与设置 | ✅ |
+| `Account → Workers Scripts → Edit` | 部署 Worker（注意：仅 Read 无法部署） | ✅ |
+| `Account → Account Settings → Read` | 列出账户（额度/部署需要账户 ID，也可通过 zones 推断） | ⚠️ 建议 |
+
+> ⚠️ **重要**：API Token 模板中的「Workers Editor」可能只含 Read 权限；部署必须确认 **Workers Scripts → Edit**。
+> 「WAF 拦截」指标需要额外的 Firewall 分析权限（Token 无权限时该指标静默降级为 0，不影响其他功能）。
+
+**所需环境变量（GitHub Actions secrets 仅需两个）**：
+
+- `CLOUDFLARE_API_TOKEN`：上述 Token（同时用于部署与运行时数据查询）
+- `EXPORT_KEY`：导出/管理密钥（未配置则禁用导出密码与管理功能，公开访问）
+
+本地开发时复制 `.dev.vars.example` 为 `.dev.vars` 并填入 `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `EXPORT_KEY`（该文件已被 gitignore）。
+
+---
+
+## 一、main 分支权限要求
 
 | 权限 | 用途 | 是否必需 |
 |------|------|:--------:|

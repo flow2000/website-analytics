@@ -1,4 +1,38 @@
-﻿# Cloudflare 网站流量分析 · AI 报告系统
+# Cloudflare 网站流量分析 · AI 报告系统
+
+> **本文件为 `dev` 分支**（Cloudflare Workers + D1 版）。
+> `main` 分支（Netlify/Vercel 无数据库版）的说明见各分支自身 README。
+
+## 🧭 dev 分支概览（Workers + D1）
+
+- **部署平台**：Cloudflare Workers + D1（不再需要 Netlify/Vercel，不依赖 MongoDB）
+- **数据存储**：D1 保存 全局设置 / 站点管理 / AI 报告 / **每日数据快照**（Cron 每日 00:05 UTC 回填近 30 天）
+- **数据展示**：今日=实时 GraphQL；近7天/近30天=D1 快照优先，缺失日期自动回源补齐
+- **指标**：UV / PV / 总流量 / 总请求数 / 带宽 + 会话数 Visits + WAF 拦截 + 流量来源分类(ipClass) + TLS 版本 + 威胁细分
+- **请求额度**：顶栏「额度」展示 Workers 请求（免费档 10 万/日）与 D1 读/写查询次数（免费档行数上限 读500万/写10万/日仅供说明）
+- **全局访问控制**：默认公开；可配置「访问密码」或「APP 二次验证（TOTP）」，管理操作以 `EXPORT_KEY` 鉴权
+- **AI 分析**：流程与 main 一致 —— 外部程序 `GET /api/export`（EXPORT_KEY）→ 分析 → `POST /api/report`（schema v3.0）
+- **CI**：`.github/workflows/deploy-dev.yml`，仅需 secrets：`CLOUDFLARE_API_TOKEN`、`EXPORT_KEY`
+
+> ℹ️ **WAF 拦截**依赖 Token 具备 Firewall 相关 Analytics 权限，当前测试 Token 仅「Analytics Read」时该指标显示 0/暂无数据（接口静默降级，不影响其他功能）。
+
+```bash
+# 本地开发（需 .dev.vars：CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / EXPORT_KEY）
+npm install
+npm run dev              # http://localhost:8787（wrangler dev --local，D1 本地模拟、GraphQL 真实调用）
+
+# 部署
+wrangler d1 create website-analytics-dev-db   # 首次建库（需要 D1 Edit 权限；或将 yarn 输出 database_id 填入 wrangler.jsonc）
+wrangler d1 execute website-analytics-dev-db --remote --file=src/schema.sql
+npx wrangler deploy --var CLOUDFLARE_API_TOKEN:$env:CLOUDFLARE_API_TOKEN --var EXPORT_KEY:$env:EXPORT_KEY
+# 推送 dev 分支即可由 GitHub Actions 自动部署
+```
+
+> 目前环境 Node 较旧（16）时请使用 Node 18+ 运行 wrangler（本项目附带 .tools/ 便携版说明见下）。
+
+---
+
+## 📦 原 main 分支文档（Netlify/Vercel 版）
 
 基于 **Cloudflare GraphQL Analytics API** 的多站点流量分析平台。服务端持有 API Token 实时代理查询，访客**无需登录 Cloudflare** 即可查看；支持多站点总览、今天/近7天/近30天多维度查看、近 30 天原始数据导出（带密码），以及外部程序生成 `report.json` 驱动的 AI 分析报告。
 
