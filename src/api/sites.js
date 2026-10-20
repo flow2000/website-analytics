@@ -20,7 +20,18 @@ async function resolveSite(env, domain) {
 
 async function getSitesList(env) {
   await ensureSchema(env);
-  return listSites(env);
+  let sites = await listSites(env);
+  // D1 为空时自动从 Cloudflare 导入（与 /api/stats 一致），避免首次访问下拉框为空
+  if (!sites.length) {
+    try {
+      const zones = await listZonesViaRest(env);
+      for (const z of zones) await upsertSite(env, { domain: z.name, zone_id: z.zoneId, status: z.status });
+      sites = await listSites(env);
+    } catch (e) {
+      console.error('sites 自动导入失败:', e.message);
+    }
+  }
+  return sites;
 }
 
 export async function handleSites(request, env) {
