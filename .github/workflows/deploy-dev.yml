@@ -23,8 +23,23 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
+      - name: Validate required secrets
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          EXPORT_KEY: ${{ secrets.EXPORT_KEY }}
+        run: |
+          test -n "$CF_TOKEN" || { echo "::error::仓库缺少 CLOUDFLARE_API_TOKEN secret（或为空），请到 Settings → Secrets 配置"; exit 1; }
+          test -n "$EXPORT_KEY" || { echo "::error::仓库缺少 EXPORT_KEY secret（或为空），请到 Settings → Secrets 配置"; exit 1; }
+          echo "secrets OK"
+
+      - name: Verify Cloudflare auth
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler whoami
+
       - name: Deploy to Cloudflare Workers (dev)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: deploy --var CLOUDFLARE_API_TOKEN:${{ secrets.CLOUDFLARE_API_TOKEN }} --var EXPORT_KEY:${{ secrets.EXPORT_KEY }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          EXPORT_KEY: ${{ secrets.EXPORT_KEY }}
+        run: npx wrangler deploy --var CLOUDFLARE_API_TOKEN:"$CF_TOKEN" --var EXPORT_KEY:"$EXPORT_KEY"
