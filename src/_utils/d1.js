@@ -3,8 +3,6 @@
  * 约定：daily_stats 以 (domain, date) 为主键，各维度以 JSON 列存储合并后的 {key:{requests..}}
  */
 
-import { buildDailyStats, mapToSortedList } from './cloudflare.js';
-
 const schemaInitCache = new WeakMap();
 
 const SCHEMA_STMTS = [
@@ -120,23 +118,26 @@ export function groupToRow(domain, group) {
   };
 }
 
+const UPSERT_SQL = `INSERT OR REPLACE INTO daily_stats (
+  domain, date, requests, page_views, uniques, bytes, threats,
+  cached_requests, cached_bytes, encrypted_requests, encrypted_bytes,
+  visits, waf_events, ip_class, ssl_protocols, threat_pathing,
+  countries, statuses, content_types, browsers, devices
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+
+/** 批量写入快照行（D1 batch，减少往返；一次最多 100 条，自动分批） */
 export async function upsertDailyRows(env, rows) {
-  for (const r of rows) {
-    if (!r.date) continue;
-    await env.DB.prepare(
-      `INSERT OR REPLACE INTO daily_stats (
-        domain, date, requests, page_views, uniques, bytes, threats,
-        cached_requests, cached_bytes, encrypted_requests, encrypted_bytes,
-        visits, waf_events, ip_class, ssl_protocols, threat_pathing,
-        countries, statuses, content_types, browsers, devices
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
-    ).bind(
+  const valid = (rows || []).filter(r => r.date);
+  if (!valid.length) return;
+  for (let i = 0; i < valid.length; i += 100) {
+    const chunk = valid.slice(i, i + 100);
+    await env.DB.batch(chunk.map(r => env.DB.prepare(UPSERT_SQL).bind(
       r.domain, r.date, r.requests || 0, r.page_views || 0, r.uniques || 0, r.bytes || 0, r.threats || 0,
       r.cached_requests || 0, r.cached_bytes || 0, r.encrypted_requests || 0, r.encrypted_bytes || 0,
       r.visits || 0, r.waf_events || 0,
       r.ip_class || null, r.ssl_protocols || null, r.threat_pathing || null,
       r.countries || null, r.statuses || null, r.content_types || null, r.browsers || null, r.devices || null
-    ).run();
+    )));
   }
 }
 
@@ -161,7 +162,7 @@ export async function getDailyRows(env, domains, startDate, endDate) {
   return rows;
 }
 
-/** 将一行快照重建为 buildDailyStats 可消费的 group 形态 */
+/** 将一行快照重建为 stats.js 可消费的 group 形态 */
 export function groupFromRow(row) {
   const parse = json => {
     try { return Object.entries(JSON.parse(json || '{}')); } catch { return []; }
@@ -187,47 +188,7 @@ export function groupFromRow(row) {
       threatPathingMap: toEntries(row.threat_pathing, 'threatPathingName'),
     },
     uniq: { uniques: row.uniques || 0 },
-    _visits: row.visits || 0,
-    _waf: row.waf_events || 0,
   };
-}
-
-/**
- * 由 D1 快照行构建统计结果（复用 buildDailyStats 口径）
- * @param {Array} sites - [{domain, zone_id}]
- * @param {Array} rows - d1.getDailyRows 结果
- * @returns {object} { totals, trend, breakdowns, perSite, dates }
- */
-export function buildStatsFromRows(sites, rows) {
-  const rowsByDomain = new Map();
-  for (const r of rows) {
-    if (!rowsByDomain.has(r.domain)) rowsByDomain.set(r.domain, []);
-    rowsByDomain.get(r.domain).push(r);
-  }
-  const zoneNameById = new Map(sites.map(s => [s.zone_id, s.domain]));
-  const zoneResults = sites.map(s => ({
-    zoneTag: s.zone_id,
-    httpRequests1dGroups: (rowsByDomain.get(s.domain) || []).map(groupFromRow),
-  }));
-
-  const stats = buildDailyStats(zoneResults, zoneNameById);
-
-  // 补 visits / waf 总量（D1 快照列）
-  const visitMap = {}, wafMap = {};
-  let visits = 0, wafEvents = 0;
-  for (const r of rows) {
-    visits += r.visits || 0;
-    wafEvents += r.waf_events || 0;
-    visitMap[r.domain] = (visitMap[r.domain] || 0) + (r.visits || 0);
-    wafMap[r.domain] = (wafMap[r.domain] || 0) + (r.waf_events || 0);
-  }
-  stats.totals.visits = visits;
-  stats.totals.wafEvents = wafEvents;
-  for (const site of stats.perSite) {
-    site.totals.visits = visitMap[site.name] || 0;
-    site.totals.wafEvents = wafMap[site.name] || 0;
-  }
-  return stats;
 }
 
 // ==================== reports ====================
