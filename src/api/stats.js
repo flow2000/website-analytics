@@ -17,7 +17,7 @@ import {
 } from '../_utils/d1.js';
 import {
   getRange, addDays, fetchDailyGroups, fetchHourlyGroups,
-  fetchDeviceGroups, buildDailyStats, buildHourlyTrend, buildDeviceStats,
+  fetchDeviceGroups, fetchTopPages, buildDailyStats, buildHourlyTrend, buildDeviceStats,
   fetchVisitsByDay, fetchFirewallEvents, listZonesViaRest, resolveZonesByNames,
 } from '../_utils/cloudflare.js';
 
@@ -90,6 +90,8 @@ export async function handleStats(request, env) {
     let visitsLive = { byDay: {}, byZone: {} };
     let wafLive = { total: 0, byAction: {}, byZone: {} };
     let devices = [];
+    let topPages = [];
+    let topPagesWindowDays = 1;
 
     if (range.key === 'today') {
       const dailyZoneResults = await fetchDailyGroups(env, zones, range.start, range.end);
@@ -97,6 +99,7 @@ export async function handleStats(request, env) {
       const hourlyZoneResults = await fetchHourlyGroups(env, zones, `${range.start}T00:00:00Z`, nowIso);
       hourly = buildHourlyTrend(hourlyZoneResults);
       devices = buildDeviceStats(await fetchDeviceGroups(env, zones, `${range.start}T00:00:00Z`, nowIso));
+      topPages = await fetchTopPages(env, zones, `${range.start}T00:00:00Z`, nowIso);
       visitsLive = await fetchVisitsByDay(env, zones, `${range.start}T00:00:00Z`, nowIso);
       wafLive = await fetchFirewallEvents(env, zones, `${range.start}T00:00:00Z`, nowIso);
       stats.totals.visits = visitsLive.byDay[range.start] || 0;
@@ -153,13 +156,16 @@ export async function handleStats(request, env) {
         }
       }
 
-      // 今日实时（1d 聚合 + 设备 + Visits + WAF）
+      // 今日实时（1d 聚合 + 设备 + Visits + WAF + 热门页面）
       const todayZoneResults = await fetchDailyGroups(env, zones, today, today);
       visitsLive = await fetchVisitsByDay(env, zones, `${today}T00:00:00Z`, nowIso);
       wafLive = await fetchFirewallEvents(env, zones, `${today}T00:00:00Z`, nowIso);
       const deviceWindowDays = Math.min(range.days, DEVICE_SAMPLE_DAYS);
       devices = buildDeviceStats(await fetchDeviceGroups(env, zones,
         new Date(Date.now() - deviceWindowDays * 86400000).toISOString(), nowIso));
+      topPagesWindowDays = deviceWindowDays;
+      topPages = await fetchTopPages(env, zones,
+        new Date(Date.now() - deviceWindowDays * 86400000).toISOString(), nowIso);
 
       // 合并：D1 过去 + 今日实时 → 统一聚合
       const allRows = await getDailyRows(env, domains, range.start, yesterday);
@@ -209,6 +215,8 @@ export async function handleStats(request, env) {
         devices,
         devicesWindowDays: range.key === 'today' ? 1 : Math.min(range.days, DEVICE_SAMPLE_DAYS),
         wafActions: buildWafActionsList(wafLive.byAction),
+        topPages,
+        topPagesWindowDays,
       },
       perSite: stats.perSite,
     }, { cache: 'public, max-age=300' });
