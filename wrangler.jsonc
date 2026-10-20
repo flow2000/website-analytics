@@ -1,5 +1,7 @@
 // Cloudflare Workers + D1 配置（dev 分支）
-// 部署：wrangler deploy --var CLOUDFLARE_API_TOKEN=xxx --var CLOUDFLARE_ACCOUNT_ID=xxx --var EXPORT_KEY=xxx
+// 敏感变量（CLOUDFLARE_API_TOKEN / EXPORT_KEY）以 Worker Secret 方式设置，勿写入本文件：
+//   echo "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN
+//   echo "$EXPORT_KEY" | npx wrangler secret put EXPORT_KEY
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "website-analytics-dev",

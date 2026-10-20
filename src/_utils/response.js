@@ -65,11 +65,11 @@ export function getQueryInt(query, key, fallback = 0) {
   return isNaN(v) ? fallback : v;
 }
 
-/** 从请求中提取管理密钥（query key 或 X-Admin-Key 头），并校验 */
+/** 从请求中提取管理密钥（query key 或 X-Admin-Key 头），并校验；未配置 EXPORT_KEY 时恒为 false */
 export function getAdminKey(request, env) {
+  if (!env.EXPORT_KEY) return false; // 未配置管理密钥 → 禁用管理操作
   const query = getQuery(request);
   const key = query.key || request.headers.get('X-Admin-Key') || '';
-  if (!env.EXPORT_KEY) return null; // 未配置管理密钥 → 禁用管理操作
   return key === env.EXPORT_KEY;
 }
 
