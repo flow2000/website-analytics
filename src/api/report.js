@@ -12,12 +12,20 @@ export async function handleReport(request, env) {
 
   if (methodIs(request, 'GET')) {
     const row = await getLatestReport(env);
-    if (!row) return jsonReply({ report: null });
     let report = null;
-    try { report = JSON.parse(row.payload); } catch { report = null; }
+    if (row) {
+      try { report = JSON.parse(row.payload); } catch { report = null; }
+    }
+    // 回退：D1 无报告时读取仓库提交的 public/data/report.json（外部程序生成，schema v3.0）
+    if (!report && env.ASSETS) {
+      try {
+        const res = await env.ASSETS.fetch(new Request(new URL('/data/report.json', request.url)));
+        if (res && res.ok) report = await res.json();
+      } catch (_) { /* 资源不存在或解析失败，保持空 */ }
+    }
     return jsonReply({
       report,
-      meta: { version: row.version, generatedAt: row.generated_at },
+      meta: row ? { version: row.version, generatedAt: row.generated_at } : null,
     }, { cache: 'no-cache' });
   }
 
