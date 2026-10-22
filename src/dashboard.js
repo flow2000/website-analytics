@@ -141,7 +141,6 @@ table.compare tbody tr:last-child { border-bottom: none; }
 table.compare tbody tr:hover { background: var(--bg-hover); }
 table.compare td { font-variant-numeric: tabular-nums; }
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.b-badge-s { background: rgba(16, 185, 129, 0.15); color: var(--success); }
 .badge.b-success { background: rgba(16, 185, 129, 0.15); color: var(--success); }
 .badge.b-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
 .badge.b-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
@@ -214,6 +213,17 @@ table.compare td { font-variant-numeric: tabular-nums; }
 .qr-fallback { font-size: 12.5px; color: var(--text-dim); word-break: break-all; margin: 6px 0; }
 footer { text-align: center; color: var(--text-dim); font-size: 12.5px; margin-top: 34px; line-height: 2; }
 footer a { color: var(--text-dim); }
+.footer-links a { text-decoration: none; border-bottom: 1px dashed transparent; transition: color .18s, border-color .18s; }
+.footer-links a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+button { touch-action: manipulation; }
+.card { transition: border-color .2s, transform .2s, box-shadow .2s; }
+.card:hover { box-shadow: 0 10px 32px rgba(0, 0, 0, 0.28); }
+.range-tabs button.active { background: linear-gradient(135deg, #f6821f, #f59e0b); box-shadow: 0 2px 10px rgba(246, 130, 31, 0.35); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+::selection { background: var(--accent-soft); }
+
 /* ===== 交互反馈 ===== */
 .btn:active { transform: translateY(0) scale(0.98); }
 .rank-item { padding: 4px 6px; margin: -4px -6px; border-radius: 10px; transition: background 0.15s; }
@@ -225,11 +235,42 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
 .modal { animation: pop 0.18s ease; }
 @keyframes pop { from { opacity: 0; transform: scale(0.96) translateY(6px); } }
 
+/* ===== 移动端适配 ===== */
+@media (max-width: 900px) {
+  .controls { padding: 12px 14px; gap: 10px; }
+  .site-select { min-width: 0; flex: 1; }
+  .range-tabs { width: 100%; overflow-x: auto; }
+  .range-tabs button { flex: 1; min-width: 76px; }
+  .updated-at { margin-left: 0; width: 100%; font-size: 12px; line-height: 1.6; }
+}
 @media (max-width: 640px) {
-  .wrap { padding: 18px 14px 40px; }
-  .kpi-value { font-size: 24px; }
-  .chart-box { height: 280px; }
-  .updated-at { margin-left: 0; width: 100%; }
+  .wrap { padding: 14px 12px 36px; }
+  .topbar { gap: 12px; }
+  .topbar-actions { width: 100%; }
+  .topbar-actions .btn { flex: 1; justify-content: center; padding: 10px 6px; font-size: 13px; }
+  .brand h1 { font-size: 18px; }
+  .brand .sub { font-size: 11.5px; }
+  .brand-logo { width: 40px; height: 40px; font-size: 20px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .kpi-card { padding: 14px; }
+  .kpi-value { font-size: 22px; }
+  .kpi-sub { font-size: 11px; }
+  .card { padding: 18px 14px; border-radius: 14px; }
+  .chart-box { height: 250px; }
+  .chart-box.tall { height: 280px; }
+  .rank-item .meta { font-size: 13px; }
+  .grid-3, .grid-2 { gap: 14px; }
+  .findings, .rec-grid, .deep-grid { grid-template-columns: 1fr; }
+  .modal { padding: 20px 16px; }
+  .modal .format-row { flex-direction: column; }
+  .modal .format-row .chip { flex: none; }
+  table.compare { min-width: 560px; }
+  .report-summary { padding: 14px 16px; font-size: 14px; }
+  footer { font-size: 11.5px; }
+}
+@media (max-width: 380px) {
+  .kpi-value { font-size: 19px; }
+  .btn { padding: 9px 5px; }
 }
 </style>
 </head>
@@ -310,7 +351,7 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
   <div class="grid-2 row-gap">
     <section class="card">
       <div class="card-head">
-        <div class="card-title">🌍 国家/地区 Top 10</div>
+        <div class="card-title">🌍 国家/地区 Top 5</div>
         <div class="card-note">按请求数排序</div>
       </div>
       <div class="rank-list" id="countryList"></div>
@@ -364,7 +405,7 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
     </section>
     <section class="card">
       <div class="card-head">
-        <div class="card-title">📄 热门页面 Top 10</div>
+        <div class="card-title">📄 热门页面 Top 5</div>
         <div class="card-note" id="topPagesNote"></div>
       </div>
       <div class="rank-list" id="topPagesList"></div>
@@ -390,7 +431,8 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
   </section>
 
   <footer>
-    数据来源：Cloudflare GraphQL Analytics API · 日期口径为 UTC（「今天」含未结束的部分数据）<br>
+    <div class="footer-links"><a href="https://github.com/flow2000/website-analytics" target="_blank" rel="noopener">⭐ GitHub · flow2000/website-analytics</a></div>
+    数据来源：Cloudflare GraphQL Analytics API · 趋势日期口径为 UTC，界面时间按本地时区（<span id="footTz">…</span>）显示 · 「今天」含未结束的部分数据<br>
     历史数据每日快照至 D1 · 分析报告 GET/POST <code>/api/report</code>（schema v3.0，由外部程序上传）· 原始数据导出：<code>/api/export</code>
   </footer>
 </div>
@@ -442,7 +484,7 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
     <input type="password" id="adminKey" placeholder="EXPORT_KEY">
     <div class="sec-title">网站管理</div>
     <div class="format-row" style="margin-bottom:10px">
-      <input type="text" id="siteDomain" placeholder="example.com" style="flex:1" style2="">
+      <input type="text" id="siteDomain" placeholder="example.com" style="flex:1">
       <button class="btn primary" id="btnAddSite">➕ 添加</button>
       <button class="btn" id="btnSyncSites">🔄 同步</button>
     </div>
@@ -490,7 +532,7 @@ const COUNTRY_ZH = {
   IE:"爱尔兰",PT:"葡萄牙",PL:"波兰",CZ:"捷克",GR:"希腊",HU:"匈牙利",RO:"罗马尼亚",UA:"乌克兰",TR:"土耳其",IL:"以色列",
   AE:"阿联酋",SA:"沙特阿拉伯",QA:"卡塔尔",EG:"埃及",ZA:"南非",NG:"尼日利亚",KE:"肯尼亚",MA:"摩洛哥",MX:"墨西哥",AR:"阿根廷",
   CL:"智利",CO:"哥伦比亚",PE:"秘鲁",NZ:"新西兰",PK:"巴基斯坦",BD:"孟加拉国",LK:"斯里兰卡",NP:"尼泊尔",KH:"柬埔寨",MM:"缅甸",
-  LA:"老挝",MN:"蒙古",KZ:"哈萨克斯坦",UZ:"乌兹别克斯坦",HR:"克罗地亚",RS:"塞尔维亚",SK:"斯洛伐克",SI:"斯洛文尼亚",LT:"立陶宛",
+  LA:"老挝",MN:"蒙古",KZ:"哈萨克斯坦",UZ:"乌兹别克斯坦",BG:"保加利亚",HR:"克罗地亚",RS:"塞尔维亚",SK:"斯洛伐克",SI:"斯洛文尼亚",LT:"立陶宛",
   LV:"拉脱维亚",EE:"爱沙尼亚",IS:"冰岛",LU:"卢森堡",MT:"马耳他",CY:"塞浦路斯",GE:"格鲁吉亚",AM:"亚美尼亚",AZ:"阿塞拜疆",BY:"白俄罗斯",
   MD:"摩尔多瓦",AL:"阿尔巴尼亚",MK:"北马其顿",BA:"波黑",JO:"约旦",LB:"黎巴嫩",KW:"科威特",BH:"巴林",OM:"阿曼",IQ:"伊拉克",
   IR:"伊朗",AF:"阿富汗",TJ:"塔吉克斯坦",KG:"吉尔吉斯斯坦",TM:"土库曼斯坦",MV:"马尔代夫",BT:"不丹",BN:"文莱",PA:"巴拿马",
@@ -524,6 +566,21 @@ function fmtBytes(n) {
 }
 function fmtPct(n) { return (n || 0).toFixed(1) + "%"; }
 const PALETTE = ["#f6821f", "#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#f59e0b", "#06b6d4", "#ec4899", "#84cc16", "#64748b"];
+const LOCAL_TZ = (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (_) { return "UTC"; } })();
+function tzOffset() {
+  try {
+    const off = -new Date().getTimezoneOffset() / 60;
+    return "UTC" + (off >= 0 ? "+" : "") + off;
+  } catch (_) { return ""; }
+}
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  try { return d.toLocaleString("zh-CN", { hour12: false, timeZone: LOCAL_TZ }); }
+  catch (_) { return d.toLocaleString("zh-CN", { hour12: false }); }
+}
+function fmtHour(iso) {
+  return String(new Date(iso).getHours()).padStart(2, "0") + ":00";
+}
 const DEVICE_ZH = { desktop: "桌面端", mobile: "移动端", tablet: "平板", other: "其他" };
 const IPCLASS_ZH = {
   visitor: "真实访客", searchEngine: "搜索引擎爬虫", monitoringService: "监控服务", malware: "恶意程序",
@@ -607,7 +664,7 @@ function openAuth() {
   $("authTitle").textContent = "🔐 访问认证";
   $("authCode").placeholder = mode === "totp" ? "请输入 6 位验证码" : "请输入访问密码";
   $("authDesc").textContent = mode === "totp"
-    ? "本系统启用了 APP 二次验证，请输入认证器 App 生成的 6 位验证码。"
+    ? "本系统启用了 APP 二次验证，请输入认证器 App 生成的 6 位验证码（验证通过后 2 天内免登录）。"
     : "本系统已启用访问密码保护，请输入密码后查看数据。";
   $("authModal").classList.add("show");
   setTimeout(() => $("authCode").focus(), 60);
@@ -652,7 +709,7 @@ async function loadUsage() {
       $("quotaNote").textContent = "免费档限额 · 更新于 " + new Date(u.fetchedAt).toLocaleTimeString("zh-CN", { hour12: false });
       $("quotaWrap").style.display = "block";
     }
-  } catch (e) { console.log("usage unlisted:", e.message); }
+  } catch (e) { /* 额度接口不可用时静默 */ }
 }
 $("btnUsage").addEventListener("click", () => { $("quotaWrap").style.display = $("quotaWrap").style.display === "block" && !$("quotaCards").innerHTML ? "block" : "none"; if ($("quotaWrap").style.display === "block") loadUsage(); });
 
@@ -802,7 +859,7 @@ async function loadStats() {
   try {
     const data = await api("/api/stats?site=" + encodeURIComponent(STATE.site) + "&range=" + STATE.range);
     STATE.stats = data;
-    $("updatedAt").textContent = "数据更新于 " + new Date(data.generatedAt).toLocaleString("zh-CN", { hour12: false }) + " · 范围：" + data.rangeLabel;
+    $("updatedAt").textContent = "数据更新于 " + fmtDateTime(data.generatedAt) + " · 范围：" + data.rangeLabel + " · 本地时区 " + LOCAL_TZ + " (" + tzOffset() + ")";
     renderAll();
     renderReport();
   } catch (e) {
@@ -875,8 +932,8 @@ function renderTrendChart() {
   $("trendEmpty").style.display = trend.length ? "none" : "block";
   if (!trend.length) return;
   const isHour = stats.trendInterval === "hour";
-  $("trendInterval").textContent = isHour ? "（今天 · 按小时 UTC）" : "（" + stats.rangeLabel + " · 按日 UTC）";
-  const labels = trend.map(r => isHour ? r.datetime.slice(11, 13) + ":00" : r.date.slice(5));
+  $("trendInterval").textContent = isHour ? "（今天 · 按小时 · 本地时区 " + LOCAL_TZ + "）" : "（" + stats.rangeLabel + " · 按日 UTC 口径）";
+  const labels = trend.map(r => isHour ? fmtHour(r.datetime) : r.date.slice(5));
   const th = chartTheme();
   const datasets = TREND_METRICS.filter(m => STATE.trendMetrics.has(m.key)).map(m => ({
     label: m.label, data: trend.map(r => r[m.key] || 0),
@@ -914,15 +971,15 @@ function renderDonuts() {
   const cacheItems = [{ label: "缓存命中", value: t.cachedRequests || 0 }, { label: "未命中", value: t.uncachedRequests || 0 }].filter(i => i.value > 0);
   toggleChartEmpty("cache", cacheItems.length > 0);
   if (cacheItems.length) renderDonut("cache", "cacheChart", cacheItems, ["#10b981", "#64748b"]);
-  const devices = (b.devices || []).slice(0, 6);
+  const devices = (b.devices || []).slice(0, 5);
   $("deviceNote").textContent = devices.length && b.devicesWindowDays ? "近 " + b.devicesWindowDays + " 天样本" : "";
   toggleChartEmpty("device", devices.length > 0);
   if (devices.length) renderDonut("device", "deviceChart", devices.map(d => ({ label: d.type, value: d.requests })), PALETTE.slice(1), v => DEVICE_ZH[v] || v);
-  const statuses = (b.statuses || []).slice(0, 6);
+  const statuses = (b.statuses || []).slice(0, 5);
   toggleChartEmpty("status", statuses.length > 0);
   if (statuses.length) {
     const top = statuses.map(s => ({ label: String(s.status), value: s.requests }));
-    const others = (b.statuses || []).slice(6);
+    const others = (b.statuses || []).slice(5);
     if (others.length) top.push({ label: "其他", value: others.reduce((s, x) => s + x.requests, 0) });
     const statusColor = code => code.startsWith("2") ? "#10b981" : code.startsWith("3") ? "#3b82f6" : code.startsWith("4") ? "#f59e0b" : code.startsWith("5") ? "#ef4444" : "#64748b";
     renderDonut("status", "statusChart", top, top.map(i => statusColor(i.label)));
@@ -940,20 +997,20 @@ function renderRankList(elId, items, opts) {
 function renderBreakdowns() {
   const b = STATE.stats.breakdowns || {};
   const totalReq = (STATE.stats.totals || {}).requests || 0;
-  const countries = (b.countries || []).slice(0, 10).map(c => ({ ...c, value: c.requests }));
+  const countries = (b.countries || []).slice(0, 5).map(c => ({ ...c, value: c.requests }));
   renderRankList("countryList", countries, { icon: c => countryFlag(c.code), name: c => countryName(c.code), sub: c => c.code, value: c => fmtInt(c.value), pct: totalReq });
-  const ctypes = (b.contentTypes || []).slice(0, 8).map(c => ({ ...c, value: c.requests }));
+  const ctypes = (b.contentTypes || []).slice(0, 5).map(c => ({ ...c, value: c.requests }));
   renderRankList("contentTypeList", ctypes, { name: c => c.name || "未知", value: c => fmtCompact(c.value), pct: totalReq });
-  const browsers = (b.browsers || []).slice(0, 8).map(x => ({ ...x, value: x.pageViews }));
+  const browsers = (b.browsers || []).slice(0, 5).map(x => ({ ...x, value: x.pageViews }));
   renderRankList("browserList", browsers, { name: x => x.name || "未知", value: x => fmtCompact(x.value), pct: (STATE.stats.totals || {}).pageViews || 0 });
 
-  const ipClasses = (b.ipClasses || []).slice(0, 10).map(x => ({ ...x, value: x.requests }));
+  const ipClasses = (b.ipClasses || []).slice(0, 5).map(x => ({ ...x, value: x.requests }));
   renderRankList("ipClassList", ipClasses, { icon: x => IPCLASS_ICON[x.name] || "📦", name: x => IPCLASS_ZH[x.name] || x.name, value: x => fmtCompact(x.value), pct: totalReq });
-  const ssls = (b.sslProtocols || []).slice(0, 6).map(x => ({ ...x, value: x.requests }));
+  const ssls = (b.sslProtocols || []).slice(0, 5).map(x => ({ ...x, value: x.requests }));
   renderRankList("sslList", ssls, { name: x => SSL_ZH[x.name] || x.name, value: x => fmtCompact(x.value), pct: totalReq });
-  const threats = (b.threatPathing || []).slice(0, 8).map(x => ({ ...x, value: x.requests }));
+  const threats = (b.threatPathing || []).slice(0, 5).map(x => ({ ...x, value: x.requests }));
   renderRankList("threatList", threats, { icon: x => THREAT_ICON[x.name] || "⚠️", name: x => x.name, value: x => fmtCompact(x.value), pct: totalReq });
-  const wafs = (b.wafActions || []).slice(0, 8).map(x => ({ ...x, value: x.requests }));
+  const wafs = (b.wafActions || []).slice(0, 5).map(x => ({ ...x, value: x.requests }));
   renderRankList("wafList", wafs, { name: x => WAF_ZH[x.name] || x.name, value: x => fmtCompact(x.value) });
 }
 
@@ -1012,13 +1069,13 @@ function renderSiteRanking() {
 /* ==================== 渲染：热门页面 ==================== */
 function renderTopPages() {
   const b = (STATE.stats && STATE.stats.breakdowns) || {};
-  const pages = b.topPages || [];
+  const pages = (b.topPages || []).slice(0, 5);
   $("topPagesNote").textContent = pages.length && b.topPagesWindowDays ? "近 " + b.topPagesWindowDays + " 天采样 · 按请求数" : "Adaptive 采样";
   const items = pages.map(p => ({ ...p, value: p.requests }));
   renderRankList("topPagesList", items, {
     name: p => "<span class='path-name'>" + escapeHtml(!p.path || p.path === "/" ? "/（首页）" : p.path) + "</span>",
     value: p => fmtCompact(p.value),
-    sub: p => "PV " + fmtCompact(p.pageViews || 0) + " · " + fmtBytes(p.bytes || 0),
+    sub: p => fmtBytes(p.bytes || 0),
   });
 }
 
@@ -1053,7 +1110,7 @@ function renderReport() {
     return;
   }
   const rangeText = report.range ? (report.range.start || "?") + " ~ " + (report.range.end || "?") : "";
-  meta.textContent = "schema v" + report.version + " · " + (report.generator || "外部分析程序") + " · " + rangeText + " · 生成于 " + new Date(report.generatedAt).toLocaleString("zh-CN", { hour12: false });
+  meta.textContent = "schema v" + report.version + " · " + (report.generator || "外部分析程序") + " · " + rangeText + " · 生成于 " + fmtDateTime(report.generatedAt) + " · " + LOCAL_TZ;
   if (STATE.site !== "all" && report.sites) {
     const site = report.sites.find(s => s.name === STATE.site);
     body.innerHTML = site ? renderSiteAnalysis(site) : "<div class=report-missing>报告中暂无站点 <b>" + STATE.site + "</b> 的分析，请查看总览报告或重新生成</div>";
@@ -1106,6 +1163,10 @@ async function bootstrap() {
   if (!STATE.needsAuth) await loadStats();
 }
 (async function init() {
+  (function () {
+    const el = document.getElementById("footTz");
+    if (el) el.textContent = LOCAL_TZ + " (" + tzOffset() + ")";
+  })();
   try {
     const cfg = await api("/api/config");
     STATE.needsAuth = cfg.needsAuth;

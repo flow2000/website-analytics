@@ -35,7 +35,7 @@ export async function handleAuth(request, env) {
       return errorReply('当前无需认证', 400);
     }
 
-    const cookie = await makeAuthCookie(env);
+    const cookie = await makeAuthCookie(env, mode === ACCESS_TOTP ? 2 : undefined);
     return new Response(JSON.stringify({ success: true, data: { ok: true } }), {
       status: 200,
       headers: {
