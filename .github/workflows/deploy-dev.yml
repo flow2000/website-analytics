@@ -1,8 +1,8 @@
-name: Deploy Worker (dev)
+name: Deploy Worker
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
           test -n "$EXPORT_KEY" || { echo "::error::EXPORT_KEY secret 为空，请到 Settings → Secrets 配置"; exit 1; }
           npx wrangler whoami
 
-      - name: Deploy to Cloudflare Workers (dev)
+      - name: Deploy to Cloudflare Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
