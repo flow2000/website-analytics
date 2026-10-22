@@ -569,8 +569,10 @@ const PALETTE = ["#f6821f", "#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#f59e0b
 const LOCAL_TZ = (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (_) { return "UTC"; } })();
 function tzOffset() {
   try {
-    const off = -new Date().getTimezoneOffset() / 60;
-    return "UTC" + (off >= 0 ? "+" : "") + off;
+    const m = new Date().getTimezoneOffset();
+    const sign = m <= 0 ? "+" : "-";
+    const abs = Math.abs(m);
+    return "UTC" + sign + String(Math.floor(abs / 60)).padStart(2, "0") + ":" + String(abs % 60).padStart(2, "0");
   } catch (_) { return ""; }
 }
 function fmtDateTime(iso) {
@@ -1171,12 +1173,13 @@ async function bootstrap() {
     const cfg = await api("/api/config");
     STATE.needsAuth = cfg.needsAuth;
     if (STATE.needsAuth) {
-      // 先用受保护接口探活：Cookie（2 天/7 天）仍有效则直接进入，仅真正 401 时才弹认证框
+      // 先用受保护接口探活并复用站点列表：Cookie 有效直接进入；401 由 api() 弹认证框，其他错误由 loadSites() 展示
+      STATE.needsAuth = false;
       try {
-        await api("/api/sites");
-        STATE.needsAuth = false;
-        await bootstrap();
-      } catch (_) { /* api() 已在 401 时打开认证框 */ }
+        await loadSites();
+        await Promise.all([loadReport(), loadUsage()]);
+        await loadStats();
+      } catch (_) { /* 错误已由 loadSites()/api() 展示 */ }
     } else {
       await bootstrap();
     }

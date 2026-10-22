@@ -482,8 +482,10 @@ const DEVICE_ZH = { desktop: "桌面端", mobile: "移动端", tablet: "平板",
 const LOCAL_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (_) { return "UTC"; } })();
 function tzOffset() {
   try {
-    const off = -new Date().getTimezoneOffset() / 60;
-    return "UTC" + (off >= 0 ? "+" : "") + off;
+    const m = new Date().getTimezoneOffset();
+    const sign = m <= 0 ? "+" : "-";
+    const abs = Math.abs(m);
+    return "UTC" + sign + String(Math.floor(abs / 60)).padStart(2, "0") + ":" + String(abs % 60).padStart(2, "0");
   } catch (_) { return ""; }
 }
 function fmtDateTime(iso) {
