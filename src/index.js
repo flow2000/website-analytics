@@ -42,12 +42,6 @@ export default {
     if (path === '/api/report') return handleReport(request, env);
     if (path === '/api/usage') return handleUsage(env);
 
-    // TEMP: 反映 raw body
-    if (path === '/api/_body') {
-      const t = await request.text().catch(e2 => 'THROW:' + e2.message);
-      return new Response(JSON.stringify({ len: String(t).length, head: String(t).slice(0, 120), ct: request.headers.get('Content-Type'), cl: request.headers.get('Content-Length') }));
-    }
-
     return errorReply('Not Found: ' + path, 404);
   },
 

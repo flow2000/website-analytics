@@ -186,7 +186,11 @@ query ZoneDeviceTypes($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Tim
   }
 }`;
 
-/** 热门页面（Adaptive 采样，按请求数排序 Top N） */
+/**
+ * 热门页面（Adaptive 采样，按请求数排序 Top N）
+ * 注意：httpRequestsAdaptiveGroups 数据集仅提供 count（请求数）与 sum(edgeResponseBytes)，
+ * 不提供 pageViews 字段（pageViews 仅存在于 1d/1h 数据集），请求非法字段会导致整条查询失败。
+ */
 export const Q_TOP_PATHS = `
 query ZoneTopPaths($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Time) {
   viewer {
@@ -199,7 +203,7 @@ query ZoneTopPaths($zoneTags: [string!], $datetimeGeq: Time, $datetimeLt: Time) 
       ) {
         count
         dimensions { path: clientRequestPath }
-        sum { pageViews edgeResponseBytes }
+        sum { edgeResponseBytes }
       }
     }
   }
@@ -304,10 +308,9 @@ export async function fetchTopPages(env, zones, datetimeGeq, datetimeLt) {
       for (const g of zone.httpRequestsAdaptiveGroups || []) {
         const path = g.dimensions && g.dimensions.path;
         if (!path) continue;
-        if (!merged[path]) merged[path] = { path, requests: 0, pageViews: 0, bytes: 0 };
+        if (!merged[path]) merged[path] = { path, requests: 0, bytes: 0 };
         const m = merged[path];
         m.requests += g.count || 0;
-        m.pageViews += (g.sum && g.sum.pageViews) || 0;
         m.bytes += (g.sum && g.sum.edgeResponseBytes) || 0;
       }
     }
