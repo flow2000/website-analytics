@@ -4,7 +4,7 @@ export default `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cloudflare 网站流量分析 (dev)</title>
+<title>网站流量分析</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6821f'/%3E%3Cpath d='M36 6 14 38h14l-4 20 24-34H32l4-18z' fill='%23fff'/%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -240,8 +240,8 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
     <div class="brand">
       <div class="brand-logo">⚡</div>
       <div>
-        <h1>Cloudflare 网站流量分析</h1>
-        <div class="sub">GraphQL Analytics · D1 快照 · 多站点 (dev)</div>
+        <h1>网站流量分析</h1>
+        <div class="sub">GraphQL Analytics · D1 快照 · 多站点</div>
       </div>
     </div>
     <div class="topbar-actions">
@@ -391,7 +391,7 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
 
   <footer>
     数据来源：Cloudflare GraphQL Analytics API · 日期口径为 UTC（「今天」含未结束的部分数据）<br>
-    dev 分支：历史数据每日快照至 D1 · 分析报告 GET/POST <code>/api/report</code>（schema v3.0，由外部程序上传）· 原始数据导出：<code>/api/export</code>
+    历史数据每日快照至 D1 · 分析报告 GET/POST <code>/api/report</code>（schema v3.0，由外部程序上传）· 原始数据导出：<code>/api/export</code>
   </footer>
 </div>
 

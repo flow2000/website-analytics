@@ -23,3 +23,6 @@ npm-debug.log*
 .wrangler/
 .tools/
 node20/
+
+# IDE / Trae
+.trae/
