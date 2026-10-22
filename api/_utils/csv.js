@@ -1,55 +1,30 @@
 /**
  * CSV 导出工具
- * 将 51.la 统计数据转换为 CSV 格式
+ * 将展平后的每日统计行生成 CSV（字段顺序固定，便于外部程序解析）
  */
-
-const { num, pct } = require('./analyzer');
 
 const CSV_HEADERS = [
-  'site', 'date', 'uv', 'pv', 'sv', 'ip', 'newUser',
-  'bounceRate', 'avgDurationSec', 'pvPerUv',
-  'beforeUv', 'beforePv', 'beforeSv', 'beforeIp',
-  'monthUv', 'monthPv', 'totalUv', 'totalPv'
+  'site', 'date', 'requests', 'pageViews', 'uniques', 'bytes',
+  'cachedRequests', 'cachedBytes', 'uncachedRequests',
+  'threats', 'encryptedRequests',
 ];
 
+function escapeCsvValue(val) {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
 /**
- * 从记录数组生成 CSV 内容
- * @param {Array} records - 原始记录数组 [{ site, date, data }]
- * @returns {string} CSV 字符串
+ * @param {Array<object>} rows - cloudflare.flattenDailyRows 的输出
+ * @returns {string} CSV 文本（不含 BOM，调用方负责）
  */
-function generateCSV(records) {
+function generateCSV(rows) {
   const lines = [CSV_HEADERS.join(',')];
-
-  for (const rec of records) {
-    const d = rec.data || {};
-    const uv = num(d.curUv);
-    const pv = num(d.curPv);
-    const bounceRate = d.curBounceRate != null ? pct(d.curBounceRate).toFixed(2) : '';
-    const avgDur = d.curAvgDuration != null ? (num(d.curAvgDuration) / 1000).toFixed(2) : '';
-    const pvPerUv = uv > 0 ? (pv / uv).toFixed(2) : '';
-
-    lines.push([
-      rec.site,
-      rec.date,
-      uv,
-      pv,
-      num(d.curSv),
-      num(d.curIp),
-      num(d.curNewUserCount),
-      bounceRate,
-      avgDur,
-      pvPerUv,
-      num(d.beforeUv),
-      num(d.beforePv),
-      num(d.beforeSv),
-      num(d.beforeIp),
-      num(d.monthUv),
-      num(d.monthPv),
-      num(d.totalUv),
-      num(d.totalPv)
-    ].join(','));
+  for (const row of rows || []) {
+    lines.push(CSV_HEADERS.map(key => escapeCsvValue(row[key])).join(','));
   }
-
   return lines.join('\n');
 }
 

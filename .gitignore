@@ -17,3 +17,12 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Cloudflare Workers / Wrangler
+.dev.vars
+.wrangler/
+.tools/
+node20/
+
+# IDE / Trae
+.trae/
