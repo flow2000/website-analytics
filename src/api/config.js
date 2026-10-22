@@ -15,13 +15,15 @@ import { errorReply, jsonReply, getAdminKey, methodIs, readJsonBody } from '../_
 import { getSetting, setSetting } from '../_utils/d1.js';
 import {
   getAccessMode, ACCESS_NONE, ACCESS_PASSWORD, ACCESS_TOTP,
-  hashPassword, generateTotpSecret, otpauthUrl, verifyTotp,
+  hashPassword, generateTotpSecret, otpauthUrl, verifyTotp, checkAuthCookie,
 } from '../_utils/auth.js';
 
 export async function handleConfig(request, env) {
   if (methodIs(request, 'GET')) {
     const mode = await getAccessMode(env);
-    return jsonReply({ mode, needsAuth: mode !== ACCESS_NONE, appName: env.APP_NAME || 'Analytics' }, { cache: 'no-cache' });
+    // 如实反映当前访客的认证状态：已有有效 wa_auth Cookie 则无需重复输入验证码/密码
+    const authed = mode === ACCESS_NONE || await checkAuthCookie(env, request.headers.get('Cookie'));
+    return jsonReply({ mode, needsAuth: !authed, appName: env.APP_NAME || 'Analytics' }, { cache: 'no-cache' });
   }
 
   if (!methodIs(request, 'POST')) return errorReply('Method not allowed', 405);

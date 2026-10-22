@@ -607,7 +607,7 @@ function escapeHtml(s) {
 }
 
 function api(url, opts) {
-  return fetch(url, opts).then(async res => {
+  return fetch(url, Object.assign({ credentials: "same-origin" }, opts || {})).then(async res => {
     const body = await res.json().catch(() => null);
     if (res.status === 401) { STATE.needsAuth = true; openAuth(); throw new Error((body && body.message) || "需要认证"); }
     if (!res.ok || !body || body.success === false) throw new Error((body && body.message) || "HTTP " + res.status);
@@ -615,7 +615,7 @@ function api(url, opts) {
   });
 }
 function apiPost(url, payload) {
-  return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+  return fetch(url, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
     .then(async res => {
       const body = await res.json().catch(() => null);
       if (!res.ok || !body || body.success === false) throw new Error((body && body.message) || "HTTP " + res.status);
@@ -1170,8 +1170,16 @@ async function bootstrap() {
   try {
     const cfg = await api("/api/config");
     STATE.needsAuth = cfg.needsAuth;
-    if (STATE.needsAuth) openAuth();
-    else await bootstrap();
+    if (STATE.needsAuth) {
+      // 先用受保护接口探活：Cookie（2 天/7 天）仍有效则直接进入，仅真正 401 时才弹认证框
+      try {
+        await api("/api/sites");
+        STATE.needsAuth = false;
+        await bootstrap();
+      } catch (_) { /* api() 已在 401 时打开认证框 */ }
+    } else {
+      await bootstrap();
+    }
   } catch (e) {
     showError("初始化失败：" + e.message);
   }
