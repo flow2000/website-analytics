@@ -1,749 +1,318 @@
-﻿# 51.LA 流量趋势分析 · AI 报告系统
+# 网站流量分析 · AI 报告系统
 
-基于 51.la 数据的多站点流量趋势分析平台，支持 AI 智能分析报告、动态数据展示、7/30天数据切换。
+> **本文件为 Cloudflare Workers + D1 版说明**。
+> 此前 Netlify/Vercel 无数据库版本（含 MongoDB 采集的 V1.0.0）见文末「原 main 分支文档」。
+
+## 🧭 概览（Workers + D1）
+
+- **部署平台**：Cloudflare Workers + D1（不再需要 Netlify/Vercel，不依赖 MongoDB）
+- **数据存储**：D1 保存 全局设置 / 站点管理 / AI 报告 / **每日数据快照**（Cron 每日 00:05 UTC 回填近 30 天）
+- **数据展示**：今日=实时 GraphQL；近7天/近30天=D1 快照优先，缺失日期自动回源补齐
+- **指标**：UV / PV / 总流量 / 总请求数 / 带宽 + 会话数 Visits + WAF 拦截 + 流量来源分类(ipClass) + TLS 版本 + 威胁细分
+- **请求额度**：顶栏「额度」展示 Workers 请求（免费档 10 万/日）与 D1 读/写查询次数（免费档行数上限 读500万/写10万/日仅供说明）
+- **全局访问控制**：默认公开；可配置「访问密码」或「APP 二次验证（TOTP）」，管理操作以 `EXPORT_KEY` 鉴权
+- **AI 分析**：流程与 main 一致 —— 外部程序 `GET /api/export`（EXPORT_KEY）→ 分析 → `POST /api/report`（schema v3.0）
+- **CI**：`.github/workflows/deploy-dev.yml`，仅需 secrets：`CLOUDFLARE_API_TOKEN`、`EXPORT_KEY`
+
+> ℹ️ **WAF 拦截**依赖 Token 具备 Firewall 相关 Analytics 权限，当前测试 Token 仅「Analytics Read」时该指标显示 0/暂无数据（接口静默降级，不影响其他功能）。
+
+```bash
+# 本地开发（需 .dev.vars：CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / EXPORT_KEY）
+npm install
+npm run dev              # http://localhost:8787（wrangler dev --local，D1 本地模拟、GraphQL 真实调用）
+
+# 部署（敏感变量以 Worker Secret 方式设置，不写入 wrangler.jsonc；账户 ID 经环境变量传入）
+export CLOUDFLARE_ACCOUNT_ID=你的账户ID
+wrangler d1 create analytics   # 首次建库（需要 D1 Edit 权限；或将输出 database_id 填入 wrangler.jsonc）
+wrangler d1 execute analytics --remote --file=src/schema.sql
+npx wrangler deploy
+echo "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN
+echo "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
+echo "$EXPORT_KEY" | npx wrangler secret put EXPORT_KEY
+# 推送分支即可由 GitHub Actions 自动部署（dev 分支触发 deploy-dev.yml，含 secret 写入）
+```
+
+> 目前环境 Node 较旧（16）时请使用 Node 18+ 运行 wrangler（本项目附带 .tools/ 便携版说明见下）。
+
+---
+
+## 📦 原 main 分支文档（Netlify/Vercel 版）
+
+基于 **Cloudflare GraphQL Analytics API** 的多站点流量分析平台。服务端持有 API Token 实时代理查询，访客**无需登录 Cloudflare** 即可查看；支持多站点总览、今天/近7天/近30天多维度查看、近 30 天原始数据导出（带密码），以及外部程序生成 `report.json` 驱动的 AI 分析报告。
+
+> 前一版本（51.LA 数据源 + MongoDB 采集）已归档于 `V1.0.0` 分支/标签。
 
 ## 🏗️ 架构概览
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   GitHub Actions                         │
-│  ┌─────────────────┐     ┌──────────────────────────┐  │
-│  │ 手动触发         │────▶│ scripts/collect-data.js  │  │
-│  └─────────────────┘     └────────────┬─────────────┘  │
-│                                        │                 │
-│                                   调用 51.la API        │
-└────────────────────────────────────────┼─────────────────┘
-                                         │
-                                         ▼
-                              ┌────────────────────┐
-                              │     MongoDB        │
-                              │  (数据持久化存储)  │
-                              └─────────┬──────────┘
-                                        │
-                    ┌───────────────────┼───────────────────┐
-                    │                   │                   │
-          GET /api/sites     GET /api/stats     GET /api/analysis
-          GET /api/export                                        │
-                    │                   │                   │
-                    ▼                   ▼                   ▼
-              ┌─────────────────────────────────────────────────┐
-              │              前端网站 (静态部署)                 │
-              │  · 多站点总览/单站点切换                          │
-              │  · 7天/30天数据切换                              │
-              │  · 流量趋势图表                                  │
-              │  · 质量指标评级                                  │
-              │  · AI 智能分析报告                               │
-              │  · 多站点对比表                                  │
-              └─────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-                              外部 AI 系统消费
-                        （调用 /api/analysis 或 /api/export）
+                 ┌──────────────────────────────┐
+                 │   Cloudflare                 │
+                 │  · GraphQL Analytics API     │◄──────┐
+                 │  · REST /zones（站点列表）   │───────┤ Bearer Token
+                 └──────────────────────────────┘       │ (仅存于服务端)
+                                                        │
+┌──────────────┐   ┌──────────────────────────────────────────────┐
+│ 访客浏览器    │──►│  Serverless 函数（Netlify / Vercel）          │
+│  · 多站点切换 │   │  GET /api/sites   站点(zone)列表             │
+│  · 今天/7/30天│   │  GET /api/stats   实时聚合统计（KPI/趋势/维度）│
+│  · 多维图表   │   │  GET /api/export  近30天原始数据导出(带密码)  │
+│  · AI 报告    │──►│  静态文件 public/data/report.json（AI 分析）  │
+└──────────────┘   └──────────────────────────────────────────────┘
+                                                        ▲
+                              ┌─────────────────────────┴─────────┐
+                              │ 外部分析程序（任意语言/任意宿主）   │
+                              │ 1. 调 /api/export 取原始数据       │
+                              │ 2. 自行分析（AI/规则均可）          │
+                              │ 3. 按 schema v3.0 生成 report.json │
+                              │ 4. 部署/提交到 public/data/        │
+                              └───────────────────────────────────┘
 ```
+
+**设计要点**
+
+- **无数据库**：Cloudflare GraphQL 支持直接查询历史数据（Adaptive 数据集全套餐至少保留 31 天），按需实时聚合，不再需要 MongoDB 与定时采集。
+- **速率友好**：Token 限额 300 次 GraphQL 查询/5 分钟；`/api/stats` 与 `/api/sites` 响应带 `Cache-Control`（默认 300s），多访客场景由 CDN 缓存削峰；单次 GraphQL 查询可批量最多 10 个 zone（`zoneTag_in`）。
+- **日期口径**：与 Cloudflare 控制台一致，使用 **UTC 日期**（「今天」为 UTC 当天，含未结束的部分数据）。
 
 ## ✨ 功能特性
 
-### 数据采集
-- 🔄 **手动采集** - GitHub Actions 手动触发，访问 51.la API 获取数据
-- 💾 **原始数据存储** - 51.la 返回的完整 bean 数据原样保存到 MongoDB
-- 🏢 **多站点支持** - 同一账号下可配置多个站点，独立存储
-
-### 数据展示
-- 📊 **总览仪表盘** - 多站点数据汇总展示
-- 📈 **流量趋势图** - UV/PV/SV 趋势可视化，支持单指标/双指标切换
-- 🎯 **流量质量指标** - 跳出率、访问时长、人均页数评级
-- 🏆 **多站点对比表** - 横向对比各站点表现
-- 📅 **7/30天切换** - 支持最近 7 天和最近 30 天数据查看
-- ⚙️ **平台额度展示** - 实时展示 Vercel / Netlify 部署平台的额度使用情况
-- 🌙/☀️ **明暗主题** - 支持深色/浅色模式切换
-
-### AI 分析报告
-- 🤖 **AI 智能分析** - 基于规则生成的模拟 AI 分析（可替换为真实 AI）
-- 💡 **优化建议** - 按类型和优先级分类的改进建议
-- 🔍 **深度分析** - 流量规律、用户行为、增长驱动、风险点
-- 🔮 **趋势展望** - 未来趋势预测
-- 📋 **行动计划** - 分阶段的落地执行方案
-- 🎯 **战略建议** - 总览层面的多站点战略规划
-
-### API 接口
-- 🔌 **RESTful API** - 5 个核心接口，支持前端和外部系统调用
-- 🔐 **访问控制** - 导出接口支持密码验证
-- 📤 **多格式导出** - 支持 JSON 和 CSV 格式导出
-- 📄 **分析 JSON 导出** - 提供结构化分析数据，供外部 AI 系统使用
-- ⚙️ **平台额度查询** - 实时查询 Vercel / Netlify 部署平台额度使用情况
-
-## 📁 项目结构
-
-```
-server/
-├── .github/
-│   └── workflows/
-│       └── collect-51la.yml         # GitHub Actions 采集工作流
-├── api/
-│   ├── _utils/
-│   │   ├── handler.js                # Netlify/Vercel 兼容层
-│   │   ├── mongo.js                  # MongoDB 连接与查询工具
-│   │   ├── analyzer.js               # 数据分析器（统计+AI报告生成）
-│   │   ├── response.js               # 响应工具（统一格式/CORS/Query解析）
-│   │   ├── csv.js                    # CSV 导出工具
-│   │   ├── usage.js                  # 平台额度查询（Vercel/Netlify）
-│   │   └── config.js                 # 共享配置（环境变量统一管理）
-│   ├── sites.js                      # 获取站点列表 API
-│   ├── stats.js                      # 获取统计数据 API
-│   ├── analysis.js                   # 获取 AI 分析报告 API
-│   ├── export.js                     # 原始数据导出 API（带密码验证）
-│   └── usage.js                      # 平台额度使用情况 API
-├── public/
-│   ├── data/
-│   │   └── report.json               # 静态报告数据（备用/离线使用）
-│   ├── favicon.png
-│   └── index.html                    # 前端页面
-├── scripts/
-│   ├── collect-data.js               # 51.la 数据采集脚本（GitHub Actions 用）
-│   └── analyze-data.js               # 本地数据分析脚本（生成静态 report.json）
-├── package.json                      # 项目依赖
-├── netlify.toml                      # Netlify 部署配置
-└── README.md                         # 本文档
-```
+- 🏢 **多站点支持** — 自动发现 Token 可访问的全部 zone，或用 `CF_ZONES` 白名单显式指定；支持「全部站点」总览 + 单站点视图，多站点时展示对比表
+- 📅 **多时间维度** — 今天（按小时趋势）/ 近7天 / 近30天（按日趋势）
+- 📊 **多维分析** — KPI（请求/PV/独立访客/流量/缓存命中率/威胁拦截）、趋势图（指标可切换）、缓存状态、设备类型、状态码分布、国家/地区 Top10、内容类型、浏览器分布
+- 🤖 **AI 分析报告** — 前端读取 `public/data/report.json` 渲染（schema v3.0 契约见下文），由外部程序生成，支持总览与单站点分析
+- 📤 **原始数据导出** — `/api/export` 导出近 30 天 GraphQL API 原始返回（JSON 完整明细 / CSV 每日汇总），支持 `EXPORT_KEY` 密码保护防滥用
+- 🌙 **明暗主题** — 跟随系统 + 手动切换，本地记忆
 
 ## 🚀 快速开始
 
-### 1. 配置 GitHub Secrets
+### 1. 创建 Cloudflare API Token
 
-在 GitHub 仓库 **Settings → Secrets and variables → Actions** 中添加以下密钥：
+> 📖 详细图文步骤、命令行验证方法与常见报错对照，见 [TOKEN.md](file:///c:/Users/A/Desktop/projects/website-analytics/server/TOKEN.md)（Token 配置指南）
 
-| Secret | 必填 | 说明 | 示例 |
-|--------|:----:|------|------|
-| `ACCESS_KEY` | ✅ | 51.la Access Key | `xxxxxxxxxxxxxxxx` |
-| `SECRET_KEY` | ✅ | 51.la Secret Key | `xxxxxxxxxxxxxxxx` |
-| `SITES` | ✅ | 站点列表（JSON 格式） | `[{"name":"example.com","maskId":"KRFNvLFZwSFuA2NM"}]` |
-| `MONGODB_URI` | ✅ | MongoDB 连接字符串 | `mongodb+srv://user:pass@cluster0.mongodb.net` |
-| `MONGODB_DB` | ❌ | 数据库名（默认 `website_statistics`） | `website_statistics` |
-| `MONGODB_COL` | ❌ | 集合名（默认 `51.la`） | `51.la` |
+1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/?to=/:account/api-tokens) → **Create Token** → **Custom token**
+2. 权限配置（二选一）：
+   - **方案 A（推荐）**：`Zone → Analytics → Read` + `Zone → Zone → Read`，Zone Resources 选择 `All zones`（或指定站点）——自动发现站点
+   - **方案 B（最小权限）**：仅 `Zone → Analytics → Read`——需另配 `CF_ZONES` 环境变量显式列出站点域名
+3. 创建并复制 Token，配置为环境变量 `CLOUDFLARE_API_TOKEN`
 
-### 2. 配置部署平台环境变量
-
-#### Netlify / Vercel 环境变量
+### 2. 配置环境变量
 
 | 变量 | 必填 | 说明 | 默认值 |
 |------|:----:|------|--------|
-| `MONGODB_URI` | ✅ | MongoDB 连接字符串 | - |
-| `MONGODB_DB` | ❌ | 数据库名 | `website_statistics` |
-| `MONGODB_COL` | ❌ | 集合名 | `51.la` |
-| `EXPORT_KEY` | ❌ | 导出接口访问密码，留空则不启用密码保护 | （空） |
-| `VERCEL_TOKEN` | ❌ | Vercel 个人访问令牌，用于展示 Vercel 额度 | （空=不展示） |
-| `VERCEL_TEAM_ID` | ❌ | Vercel 团队 ID，个人账号不用填 | （空） |
-| `NETLIFY_TOKEN` | ❌ | Netlify 个人访问令牌，用于展示 Netlify 额度 | （空=不展示） |
-| `NETLIFY_ACCOUNT_SLUG` | ❌ | Netlify 团队 slug，不填默认取第一个团队 | （空） |
+| `CLOUDFLARE_API_TOKEN` | ✅ | Cloudflare API Token（也接受 `CF_API_TOKEN`） | - |
+| `CLOUDFLARE_ACCOUNT_ID` | ❌ | 限定账号 ID（自动发现站点时过滤） | （不过滤） |
+| `CF_ZONES` | ❌ | 站点白名单：`"a.com,b.com"` 或 `'["a.com","b.com"]'`，设置后无需 Zone Read 权限 | （全部 zone） |
+| `EXPORT_KEY` | ❌ | 导出接口访问密码，未设置则不启用密码保护 | （空） |
 
-**平台额度 Token 获取方式**（用于网站上的「平台额度使用情况」展示）：
-
-- **Vercel**：访问 [vercel.com/account/settings/tokens](https://vercel.com/account/settings/tokens) → Create Token，复制生成的令牌填入 `VERCEL_TOKEN`。如需展示团队额度，在团队设置页 URL 或 Team ID 中找到 `VERCEL_TEAM_ID`
-- **Netlify**：访问 [app.netlify.com/user/applications](https://app.netlify.com/user/applications) → Personal access tokens → New access token，填入 `NETLIFY_TOKEN`。团队 slug 在 Team settings → General → Team information 中查看
-
-> Token 仅保存在部署平台服务端，用于服务端调用平台 API，不会暴露给前端。未配置 Token 时网站会正常显示，对应平台显示「未配置」提示。
-
-### 3. 触发数据采集
-
-工作流仅支持手动触发：
-
-- **手动触发**：GitHub 仓库 → Actions → "51.la Data Collector" → Run workflow
-
-### 4. 部署到 Netlify / Vercel
-
-#### Netlify
-1. 连接 GitHub 仓库
-2. Build command: 留空（纯静态 + Functions）
-3. Publish directory: `public`
-4. Functions directory: `api`
-5. 在 Site settings → Environment variables 中配置环境变量
-
-#### Vercel
-1. 导入 GitHub 仓库
-2. Framework Preset: Other
-3. Root Directory: `server`
-4. 在 Settings → Environment Variables 中配置环境变量
-
-### 5. 本地开发
+### 3. 本地开发
 
 ```bash
 cd server
-npm install
-
-# 设置环境变量（Windows PowerShell）
-$env:MONGODB_URI="mongodb://localhost:27017"
-
-# 运行采集
-npm run collect
-
-# 本地预览前端（使用任意静态服务器）
-npx serve public
+npm run dev
+# 打开 http://localhost:3001（Mock 数据，无需 Token）
 ```
+
+### 4. 部署到 Netlify / Vercel
+
+- **Netlify**：Build command 留空，Publish directory `public`，Functions directory `api`，配置环境变量
+- **Vercel**：导入仓库，Root Directory `server`，Framework Preset `Other`，配置环境变量
+
+零 npm 依赖，无需构建。
 
 ## 📡 API 文档
 
-所有 API 均返回 JSON 格式，基础路径为 `/api`。
+所有接口返回 `{ success, data }` 或 `{ success: false, message }`，基础路径 `/api`。
 
-### 通用响应格式
-
-```json
-{
-  "success": true,
-  "data": { ... }
-}
-```
-
-错误响应：
-
-```json
-{
-  "success": false,
-  "message": "错误描述"
-}
-```
-
----
-
-### 1. 获取站点列表
-
-**GET** `/api/sites`
-
-获取所有已采集数据的站点列表。
-
-**响应示例：**
+### 1. 站点列表 `GET /api/sites`
 
 ```json
 {
   "success": true,
   "data": {
     "total": 2,
-    "sites": [
-      { "name": "example.com" },
-      { "name": "blog.example.com" }
-    ]
+    "sites": [{ "name": "example.com", "zoneId": "xxx", "status": "active", "plan": "Free" }]
   }
 }
 ```
 
----
+### 2. 统计数据 `GET /api/stats?site=<域名|zoneId|all>&range=today|7d|30d`
 
-### 2. 获取统计数据
+| 参数 | 说明 |
+|------|------|
+| `site` | 站点域名或 zoneId，留空/`all` 为全部站点总览 |
+| `range` | `today`（按小时趋势）/ `7d`（默认）/ `30d`（按日趋势） |
 
-**GET** `/api/stats`
+**响应结构：**
 
-获取统计数据，用于前端展示。
-
-**请求参数：**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|:----:|------|
-| `site` | string | ❌ | 站点名，留空或 `all` 返回所有站点总览 |
-| `days` | number | ❌ | 最近 N 天数据，默认 `7` |
-
-**响应示例（总览）：**
-
-```json
+```jsonc
 {
-  "success": true,
-  "data": {
-    "days": 7,
-    "overview": {
-      "totalSites": 2,
-      "totalUv": 1500,
-      "totalPv": 3200,
-      "totalSv": 1800,
-      "totalIp": 1200,
-      "totalNew": 800,
-      "avgBounceRate": 65.5,
-      "avgDuration": 45,
-      "avgPvPerUv": 2.13,
-      "reportDays": 7,
-      "bestSite": "example.com",
-      "bestGrade": "良好",
-      "weakestSite": "blog.example.com",
-      "weakestGrade": "一般"
-    },
-    "sites": [
-      {
-        "name": "example.com",
-        "today": {
-          "uv": 800,
-          "pv": 1800,
-          "sv": 950,
-          "ip": 650,
-          "newUser": 420,
-          "bounceRate": 55.2,
-          "avgDuration": 65,
-          "pvPerUv": 2.25
-        },
-        "yesterday": { ... },
-        "compare": {
-          "uvChange": 12.5,
-          "pvChange": 8.3,
-          "svChange": 5.1,
-          "ipChange": 10.2,
-          "newUserChange": -3.2
-        },
-        "cumulative": {
-          "monthUv": 24000,
-          "monthPv": 52000,
-          "totalUv": 580000,
-          "totalPv": 1200000,
-          "topUv": 2100,
-          "topPv": 4500,
-          "topUvDate": "2026-09-15",
-          "topPvDate": "2026-09-20"
-        },
-        "quality": {
-          "bounceRate": { "value": 55.2, "level": "良好", "change": -2.1 },
-          "avgDuration": { "value": 65, "level": "良好", "change": 8.5 },
-          "pvPerUv": { "value": 2.25, "level": "良好" }
-        },
-        "trend": {
-          "uvTrend": "上升",
-          "pvTrend": "平稳",
-          "avgUv": 720,
-          "avgPv": 1600,
-          "todayUvVsAvg": 11.1,
-          "todayPvVsAvg": 12.5,
-          "daysAnalyzed": 7
-        },
-        "history": [
-          { "date": "2026-10-01", "uv": 680, "pv": 1500, "sv": 800, "ip": 550, "bounceRate": 58.0, "avgDuration": 60, "newUser": 380, "pvPerUv": 2.21 }
-        ],
-        "overallGrade": "良好"
-      }
-    ]
-  }
+  "range": "7d", "rangeLabel": "近7天", "rangeDays": 7,
+  "start": "2026-10-12", "end": "2026-10-18",     // UTC 日期
+  "trendInterval": "day",                          // day | hour（today 时为 hour）
+  "generatedAt": "2026-10-18T04:00:00.000Z",
+  "sites": [{ "name": "example.com", "zoneId": "xxx" }],
+  "totals": {                                      // 范围内 KPI 总量
+    "requests": 0, "pageViews": 0, "uniques": 0,   // uniques 为「按日去重求和」口径
+    "bytes": 0, "threats": 0,
+    "cachedRequests": 0, "cachedBytes": 0,
+    "uncachedRequests": 0, "uncachedBytes": 0,
+    "encryptedRequests": 0, "encryptedBytes": 0,
+    "cacheHitRate": 88.4, "encryptedRate": 97.2    // 百分数
+  },
+  "trend": [                                       // day: {date} / hour: {datetime}
+    { "date": "2026-10-12", "requests": 0, "pageViews": 0, "uniques": 0, "bytes": 0, "threats": 0 }
+  ],
+  "breakdowns": {
+    "countries":  [{ "code": "CN", "requests": 0, "bytes": 0, "threats": 0 }],
+    "statuses":   [{ "status": 200, "requests": 0 }],
+    "contentTypes": [{ "name": "html", "requests": 0, "bytes": 0 }],
+    "browsers":   [{ "name": "Chrome", "pageViews": 0 }],
+    "devices":    [{ "type": "mobile", "requests": 0 }],
+    "devicesWindowDays": 3                          // 设备类型为 Adaptive 采样，窗口 min(范围, 3天)
+  },
+  "perSite": [                                     // 每站点明细（多站点对比用）
+    { "name": "example.com", "zoneId": "xxx", "totals": { "..." : 0 }, "trend": [ /* 同上 */ ] }
+  ]
 }
 ```
 
----
+**数据来源（GraphQL 数据集）：** `httpRequests1dGroups`（按日，含 countryMap/responseStatusMap/contentTypeMap/browserMap/uniq.uniques）、`httpRequests1hGroups`（今天按小时）、`httpRequestsAdaptiveGroups`（设备类型，独立查询、失败自动降级为空）。
 
-### 3. 获取 AI 分析报告
+### 3. 原始数据导出 `GET /api/export`
 
-**GET** `/api/analysis`
+| 参数 | 说明 |
+|------|------|
+| `key` | 访问密码（配置了 `EXPORT_KEY` 时必填，错误返回 403） |
+| `site` | 站点域名或 zoneId，留空导出全部 |
+| `days` | 天数，默认 `30`，上限 `92` |
+| `start` / `end` | 可选，覆盖日期范围（`YYYY-MM-DD`，UTC） |
+| `format` | `json`（默认，完整明细）/ `csv`（每日汇总） |
 
-获取 AI 分析报告数据（基于规则生成的模拟 AI 分析）。
-该接口返回的数据可直接用于前端展示，也可导出给外部 AI 系统进行深度分析。
+**JSON 结构**（GraphQL 原始返回，未加工）：
 
-**请求参数：**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|:----:|------|
-| `site` | string | ❌ | 站点名，留空或 `all` 返回总览分析 |
-| `days` | number | ❌ | 最近 N 天数据，默认 `7` |
-| `key` | string | ❌ | 访问密码（配置了 EXPORT_KEY 时可选验证） |
-
-**响应示例（单站点）：**
-
-```json
+```jsonc
 {
-  "success": true,
-  "data": {
-    "version": "2.0",
-    "generatedAt": "2026-10-07T08:00:00.000Z",
-    "generator": "51.LA Analytics Engine",
-    "dataSource": "51.LA Open API V6",
-    "days": 7,
-    "site": {
-      "name": "example.com",
-      "today": { ... },
-      "compare": { ... },
-      "quality": { ... },
-      "trend": { ... },
-      "history": [...],
-      "overallGrade": "良好",
-      "aiReport": {
-        "summary": "example.com 今日 UV 800，PV 1800，较昨日增长 12.5%，综合质量评级为「良好」，近期趋势向好。",
-        "keyFindings": [
-          { "icon": "📈", "text": "UV 呈上升趋势，日均 UV 720，今日高于均值 11.1%" },
-          { "icon": "🎯", "text": "跳出率 55.2%，评级：良好" },
-          { "icon": "⏱️", "text": "平均访问时长 65秒，评级：良好" },
-          { "icon": "📄", "text": "人均浏览 2.25 页，评级：良好" }
-        ],
-        "recommendations": [
-          {
-            "type": "success",
-            "title": "跳出率表现良好",
-            "detail": "用户留存能力强，跳出率处于良好水平，可继续保持内容质量并加大推广力度。",
-            "priority": "low"
-          }
-        ],
-        "deepAnalysis": {
-          "trafficPattern": "近期 UV 趋势整体呈「上升」态势，日均 UV 约 720...",
-          "userBehavior": "用户跳出率为 55.2%，处于「良好」水平...",
-          "growthDrivers": "流量增长势头良好，增长可能来源于内容积累效应...",
-          "riskPoints": [
-            "UV 趋势下降，需警惕持续下滑风险"
-          ],
-          "actionPlan": [
-            "优化首页和落地页加载速度、增加热门文章和相关推荐模块",
-            "优化内链结构，提升用户浏览深度",
-            "建立系统化的内容运营体系"
-          ]
-        },
-        "trendOutlook": "未来一段时间流量有望继续保持增长态势，建议乘胜追击..."
-      }
-    }
-  }
-}
-```
-
-**响应示例（总览）：**
-
-```json
-{
-  "success": true,
-  "data": {
-    "version": "2.0",
-    "generatedAt": "2026-10-07T08:00:00.000Z",
-    "generator": "51.LA Analytics Engine",
-    "dataSource": "51.LA Open API V6",
-    "days": 7,
-    "summary": { ... },
-    "sites": [ { "name": "...", "aiReport": { ... } } ],
-    "overallAI": {
-      "executiveSummary": "共 2 个站点，今日总 UV 1500，总 PV 3200...",
-      "crossSiteComparison": {
-        "uvGap": "example.com 领先 blog.example.com 约 60%...",
-        "pvGap": "...",
-        "qualityGap": "...",
-        "conclusion": "..."
-      },
-      "strategicRecommendations": [
-        {
-          "target": "example.com",
-          "strategy": "标杆巩固",
-          "focus": "保持领先优势，探索新增长模式",
-          "actions": [
-            "持续输出高质量内容，巩固流量基本盘",
-            "探索新的流量渠道和增长方式"
-          ]
-        }
-      ]
-    }
-  }
-}
-```
-
----
-
-### 4. 原始数据导出
-
-**GET** `/api/export`
-
-从 MongoDB 导出原始数据，带访问密码验证。
-
-**请求参数：**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|:----:|------|
-| `key` | string | ❌ | 访问密码（配置了 `EXPORT_KEY` 时必填） |
-| `format` | string | ❌ | 导出格式：`json`（默认）或 `csv`；其他值返回 `400` |
-| `site` | string | ❌ | 指定站点名，留空则导出全部站点 |
-| `days` | number | ❌ | 最近 N 天的数据 |
-| `start` | string | ❌ | 开始日期（YYYY-MM-DD） |
-| `end` | string | ❌ | 结束日期（YYYY-MM-DD） |
-
-**JSON 响应格式：**
-
-```json
-{
-  "exportedAt": "2026-10-07T08:00:00.000Z",
-  "source": "51.LA Analytics",
+  "exportedAt": "...",
+  "source": "Cloudflare GraphQL Analytics API",
+  "queryInfo": {
+    "dataset": "httpRequests1dGroups",
+    "date_geq": "2026-09-19", "date_leq": "2026-10-18", "dateBasis": "UTC",
+    "fields": ["requests", "pageViews", "bytes", "threats", "cachedBytes", "cachedRequests",
+               "encryptedBytes", "encryptedRequests", "countryMap", "responseStatusMap",
+               "contentTypeMap", "browserMap", "uniq.uniques"]
+  },
   "totalSites": 2,
-  "totalRecords": 14,
+  "totalRecords": 60,
   "sites": [
     {
       "site": "example.com",
-      "recordCount": 7,
-      "records": [
-        {
-          "date": "2026-10-01",
-          "data": {
-            "curTime": "2026/10/01-2026/10/01",
-            "curUv": 680,
-            "curPv": 1500,
-            "curSv": 800,
-            "curIp": 550,
-            "curBounceRate": 0.58,
-            "curAvgDuration": 60000,
-            "beforeUv": 620,
-            "beforePv": 1400,
-            "monthUv": 21000,
-            "totalUv": 579200,
-            "...": "..."
-          }
-        }
-      ]
+      "zoneId": "xxx",
+      "datasets": {
+        "httpRequests1dGroups": [ /* GraphQL 原始返回的每日分组，含全部嵌套 Map */ ],
+        "httpRequestsAdaptiveGroups_deviceTypes": [ /* 设备类型分布 */ ]
+      }
     }
   ]
 }
 ```
 
-**CSV 导出字段：**
+**CSV 列：** `site, date, requests, pageViews, uniques, bytes, cachedRequests, cachedBytes, uncachedRequests, threats, encryptedRequests`
 
-`site, date, uv, pv, sv, ip, newUser, bounceRate, avgDurationSec, pvPerUv, beforeUv, beforePv, beforeSv, beforeIp, monthUv, monthPv, totalUv, totalPv`
+## 📋 report.json 字段契约（schema v3.0）
 
-**状态码：**
+前端读取 `public/data/report.json`（同源静态文件）渲染 AI 分析报告；文件不存在或格式错误时展示友好占位。**外部程序按以下契约生成**（示例见 `public/data/report.json`）：
 
-| 状态码 | 说明 |
-|--------|------|
-| 200 | 成功 |
-| 403 | 密码错误 |
-| 405 | 方法不允许 |
-| 500 | 服务器错误 |
-
----
-
-### 5. 平台额度使用情况
-
-**GET** `/api/usage`
-
-实时查询 Vercel / Netlify 部署平台的额度使用情况，前端「平台额度使用情况」板块即使用此接口。
-
-需要在部署平台配置 `VERCEL_TOKEN` / `NETLIFY_TOKEN` 环境变量，未配置 Token 的平台返回 `configured: false`。
-
-**响应示例：**
-
-```json
+```jsonc
 {
-  "success": true,
-  "data": {
-    "fetchedAt": "2026-10-11T13:29:05.563Z",
-    "vercel": {
-      "configured": true,
-      "ok": true,
-      "account": "flow2000's projects",
-      "plan": "hobby",
-      "period": "2026-10-01 ~ 2026-10-11",
-      "metrics": [
-        { "key": "bandwidth", "label": "数据传输（外发）", "used": 27685208412, "usedDisplay": "25.78 GB", "included": 107374182400, "includedDisplay": "100 GB", "percent": 25.8, "kind": "bytes" },
-        { "key": "requests", "label": "CDN 请求数", "used": 497616, "usedDisplay": "497,616", "included": 1000000, "includedDisplay": "1,000,000", "percent": 49.8, "kind": "count" },
-        { "key": "functionInvocations", "label": "函数调用数", "used": 157433, "usedDisplay": "157,433", "included": 1000000, "includedDisplay": "1,000,000", "percent": 15.7, "kind": "count" },
-        { "key": "functionExecution", "label": "函数执行时长", "used": 10.81, "usedDisplay": "10.81 GB-hrs", "included": 100, "includedDisplay": "100 GB-hrs", "percent": 10.8, "kind": "gbhours" },
-        { "key": "buildTime", "label": "构建时长", "used": 219, "usedDisplay": "219 分钟", "included": null, "includedDisplay": null, "percent": null, "kind": "minutes" }
-      ]
-    },
-    "netlify": {
-      "configured": true,
-      "ok": true,
-      "account": "flow2000's team",
-      "plan": "Free",
-      "period": "2026-10-01 ~ 2026-11-01",
-      "metrics": [
-        { "key": "sites", "label": "站点数", "used": 0, "usedDisplay": "0", "included": 500, "includedDisplay": "500", "percent": 0, "kind": "count" },
-        { "key": "bandwidth", "label": "带宽", "used": 0, "usedDisplay": "0 GB", "included": 107374182400, "includedDisplay": "100 GB", "percent": 0, "kind": "bytes" },
-        { "key": "build_minutes", "label": "构建时长", "used": 0, "usedDisplay": "0 分钟", "included": 300, "includedDisplay": "300 分钟", "percent": 0, "kind": "minutes" },
-        { "key": "edge_functions", "label": "Edge 函数调用", "used": 0, "usedDisplay": "0", "included": 1000000, "includedDisplay": "1,000,000", "percent": 0, "kind": "count" }
-      ]
+  "version": "3.0",                      // 必填，固定 "3.0"
+  "generatedAt": "ISO8601 时间",          // 必填
+  "generator": "外部分析程序名称",          // 必填，展示在报告元信息
+  "dataSource": "数据来源说明",            // 可选
+  "range": { "days": 30, "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" },  // 可选，报告覆盖范围
+
+  "sites": [                             // 每站点分析（单站点视图/总览视图均会渲染）
+    {
+      "name": "example.com",             // 必填，需与 /api/sites 返回的域名一致
+      "metrics": {                       // 可选，与 /api/stats 口径一致的指标摘要
+        "requests": 0, "pageViews": 0, "uniques": 0, "bytes": 0, "threats": 0, "cacheHitRate": 0
+      },
+      "analysis": {
+        "grade": "优秀|良好|一般|较差",     // 可选，渲染为评级徽章
+        "summary": "一段话总结",           // 必填
+        "keyFindings": [ { "icon": "📈", "text": "关键发现（icon 为 emoji）" } ],
+        "recommendations": [ { "type": "success|warning|info", "title": "标题",
+                               "detail": "详情", "priority": "high|medium|low" } ],
+        "deepAnalysis": {
+          "trafficPattern": "流量规律", "userBehavior": "用户行为", "growthDrivers": "增长驱动",
+          "riskPoints": ["风险点"], "actionPlan": ["行动计划"]
+        },
+        "trendOutlook": "趋势展望"
+      }
     }
+  ],
+
+  "overall": {                           // 总览视图渲染（可选）
+    "summary": "多站点总览总结",
+    "siteRanking": [ { "name": "example.com", "note": "排名说明" } ],
+    "strategicRecommendations": [ { "target": "站点名", "strategy": "策略名",
+                                    "focus": "重点", "actions": ["具体动作"] } ]
   }
 }
 ```
 
-**说明：**
+所有数组字段均可省略；未知字段会被忽略，便于增量扩展。
 
-| 字段 | 说明 |
-|------|------|
-| `configured` | 是否配置了对应平台的 Token |
-| `hint` | 未配置时的提示文案 |
-| `ok` | 查询是否成功 |
-| `error` | 查询失败原因（Token 失效、网络超时等） |
-| `account` | 账号/团队名称 |
-| `plan` | 套餐名称（Vercel 取团队 `billing.plan`，Netlify 取 `type_name`） |
-| `period` | 账期范围（Vercel 为当前自然月，Netlify 取计费周期） |
-| `metrics[].percent` | 使用百分比（有额度上限时返回），前端按 ≥70% 黄色、≥90% 红色预警 |
+## 🔄 与外部分析程序集成
 
-**Vercel 指标来源：** `GET /v2/usage?type=requests|builds&from=&to=`（当前自然月），汇总各周期条目得到总量，共 9 项指标（数据传输外发/入站、CDN 请求数、函数调用数、函数执行时长、监控数据点、构建次数、构建时长、构建排队时长），其中数据传输外发 / CDN 请求数 / 函数调用数 / 函数执行时长 4 项附带**项目级分布**（响应自带 breakdown，跨周期平均占比，返回全部项目；前端内联展示 Top3，点击占比行后卡片翻转为该维度全部项目占比列表，可点「‹ 返回」还原）；另接入 edge/artifacts/storage_*/cron_jobs/data_cache 等类型（有数据自动展示）与资源计数（项目数 / 域名数 / 本月部署数，来自 /v9/projects、/v5/domains、/v6/deployments，这些端点的 pagination.count 只是当页条数，故全量拉取后按数组长度计数，满页显示 100+）。额度上限取自官方套餐页（Hobby：100 GB 传输 / 1M CDN 请求 / 1M 函数调用 / 100 GB-hrs 执行，Pro：1 TB 传输），API 未提供的官方仪表盘指标（Fast Origin Transfer、Fluid CPU、Deployment/Functions Storage 等）暂不支持。**Netlify 指标来源：** `GET /api/v1/accounts` 的 `capabilities`（`included` 即额度上限，共 11 项消耗型额度），其中**构建时长**以 `GET /api/v1/{account_id}/builds/status` 的官方统计为准（capabilities 上报值长期为 0，builds/status 提供真实已用分钟数、包含额度与账期），账期展示也优先取自该接口（end 为下一账期开始的排他边界，展示含尾日自动减 1 天）；当前账期全部零用量时返回 `allZero: true`，前端显示「暂无用量记录」提示。
+```bash
+# 1. 获取近 30 天原始数据
+curl "https://your-site.example.com/api/export?key=密码&days=30&format=json" -o raw.json
 
----
+# 2. 外部程序分析 raw.json（规则引擎 / LLM 均可）
 
-## 🔄 数据流说明
-
-### 数据采集流程
-
-1. **触发**：GitHub Actions 手动触发
-2. **采集**：`scripts/collect-data.js` 调用 51.la API 获取各站点数据
-3. **存储**：原始 bean 数据原样存入 MongoDB，按 `site + date` 复合唯一键 upsert
-4. **完成**：每个站点每天一条记录
-
-### 前端数据加载流程
-
-1. 页面加载时，并行调用 `/api/stats` 和 `/api/analysis`
-2. `stats` 接口返回统计数据（用于卡片、图表、质量指标）
-3. `analysis` 接口返回 AI 分析报告（用于 AI 分析区域）
-4. 用户切换站点/天数时，重新调用对应接口
-5. 若 API 不可用，自动降级到 `data/report.json` 静态文件
-
-### 外部 AI 分析流程
-
-1. 外部系统调用 `/api/analysis?key=密码&days=30` 获取结构化分析数据
-2. 或调用 `/api/export?key=密码&days=30&format=json` 获取原始数据
-3. 外部 AI 系统基于数据生成深度分析报告
-4. （可选）将生成的报告推送到 `public/data/report.json` 供前端离线使用
-
-## 📊 数据模型
-
-### MongoDB 文档结构
-
-```javascript
-{
-  _id: ObjectId,
-  site: "example.com",           // 站点名称
-  date: "2026-10-07",            // 日期（YYYY-MM-DD）
-  updatedAt: ISODate,            // 更新时间
-  data: {                        // 51.la 返回的原始 bean 数据
-    curTime: "2026/10/07-2026/10/07",
-    curUv: 800,
-    curPv: 1800,
-    curSv: 950,
-    curIp: 650,
-    curNewUserCount: 420,
-    curBounceRate: 0.552,
-    curAvgDuration: 65000,
-    beforeUv: 711,
-    beforePv: 1662,
-    // ... 更多 51.la 原始字段
-  }
-}
+# 3. 按 schema v3.0 生成 report.json，部署到 public/data/report.json
+#    （典型做法：CI 任务生成后提交仓库，与 V1.0.0 版本的「更新网站分析报告」提交模式一致）
 ```
 
-**索引：** `{ site: 1, date: 1 }` 复合唯一索引
+## ⚙️ 限额与注意事项
 
-### 51.la API 完整字段
+| 项 | 值 |
+|----|----|
+| GraphQL 查询频率 | 每 Token 300 次 / 5 分钟（本站 `stats` 响应默认 CDN 缓存 300s 削峰） |
+| 单查询 zone 数 | 最多 10 个（服务端自动分批） |
+| 数据保留 | Adaptive 数据集全套餐 ≥ 31 天；按日/小时聚合数据集按套餐更长，近 30 天查询与导出均安全 |
+| 设备类型 | `httpRequestsAdaptiveGroups` 为 Adaptive 采样数据，前端标注「近 3 天样本」 |
+| 日期口径 | UTC（与 Cloudflare 控制台一致），「今天」含未结束的部分数据 |
 
-51.la overview 接口返回的 bean 包含以下字段：
+## 📁 项目结构
 
-| 分类 | 字段 | 类型 | 说明 |
-|------|------|------|------|
-| **今日** | curTime | string | 今日时间 |
-| | curUv | int | 今日访客数 UV |
-| | curNewUserCount | int | 今日新访客数 |
-| | curSv | int | 今日会话数 |
-| | curPv | int | 今日浏览量 PV |
-| | curIp | int | 今日 IP 数 |
-| | curBounceRate | float | 今日跳出率 |
-| | curAvgDuration | float | 今日平均访问时长（毫秒） |
-| **昨日** | beforeTime | string | 昨日时间 |
-| | beforeUv | int | 昨日访客数 UV |
-| | beforeNewUserCount | int | 昨日新访客数 |
-| | beforeSv | int | 昨日会话数 |
-| | beforePv | int | 昨日浏览量 PV |
-| | beforeIp | int | 昨日 IP 数 |
-| | beforeBounceRate | float | 昨日跳出率 |
-| | beforeAvgDuration | float | 昨日平均访问时长（毫秒） |
-| **预测** | predictTime | string | 预计日期 |
-| | predictUv | int | 预计访客数 UV |
-| | predictNewUserCount | int | 预计新访客数 |
-| | predictSv | int | 预计会话数 |
-| | predictPv | int | 预计浏览量 PV |
-| | predictIp | int | 预计 IP 数 |
-| **昨日此时** | yesterdayCurUv | int | 昨日此时访客数 UV |
-| | yesterdayCurNewUserCount | int | 昨日此时新访客数 |
-| | yesterdayCurSv | int | 昨日此时会话数 |
-| | yesterdayCurPv | int | 昨日此时浏览量 PV |
-| | yesterdayCurIp | int | 昨日此时 IP 数 |
-| | yesterdayCurBounceRate | float | 昨日此时跳出率 |
-| | yesterdayCurAvgDuration | float | 昨日此时平均访问时长（毫秒） |
-| **历史最高** | topUv | int | 历史最高访客数 UV |
-| | topTimeUv | string | 历史最高 UV 日期 |
-| | topNewUserCount | int | 历史最高新访客数 |
-| | topTimeNewUserCount | string | 历史最高新访客数日期 |
-| | topSv | int | 历史最高会话数 |
-| | topTimeSv | string | 历史最高会话数日期 |
-| | topPv | int | 历史最高浏览量 PV |
-| | topTimePv | string | 历史最高 PV 日期 |
-| | topIp | int | 历史最高 IP 数 |
-| | topTimeIp | string | 历史最高 IP 数日期 |
-| | topBounceRate | float | 历史最高跳出率 |
-| | topTimeBounceRate | string | 历史最高跳出率日期 |
-| | topAvgDuration | float | 历史最高平均访问时长（毫秒） |
-| | topTimeAvgDuration | string | 历史最高平均访问时长日期 |
-| **本月** | monthUv | int | 月访客数 UV |
-| | monthNewUserCount | int | 月新访客数 |
-| | monthSv | int | 月会话数 |
-| | monthPv | int | 月浏览量 PV |
-| | monthIp | int | 月 IP 数 |
-| | monthBounceRate | float | 月跳出率 |
-| | monthAvgDuration | float | 月平均访问时长（毫秒） |
-| **累计** | totalUv | int | 总访客数 UV |
-| | totalNewUserCount | int | 总新访客数 |
-| | totalSv | int | 总会话数 |
-| | totalPv | int | 总浏览量 PV |
-| | totalIp | int | 总 IP 数 |
-| | totalBounceRate | float | 总跳出率 |
-| | totalAvgDuration | float | 总平均访问时长（毫秒） |
-
-## ⚙️ 环境变量
-
-### GitHub Actions
-
-| 变量 | 说明 |
-|------|------|
-| `ACCESS_KEY` | 51.la Access Key |
-| `SECRET_KEY` | 51.la Secret Key |
-| `SITES` | 站点列表 JSON |
-| `MONGODB_URI` | MongoDB 连接字符串 |
-| `MONGODB_DB` | 数据库名 |
-| `MONGODB_COL` | 集合名 |
-
-### 部署平台（Netlify/Vercel）
-
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `MONGODB_URI` | MongoDB 连接字符串 | - |
-| `MONGODB_DB` | 数据库名 | `website_statistics` |
-| `MONGODB_COL` | 集合名 | `51.la` |
-| `EXPORT_KEY` | 导出接口访问密码，留空则不启用密码保护 | （空） |
-| `VERCEL_TOKEN` | Vercel 个人访问令牌，用于 /api/usage 额度查询 | （空） |
-| `VERCEL_TEAM_ID` | Vercel 团队 ID，个人账号不用填 | （空） |
-| `NETLIFY_TOKEN` | Netlify 个人访问令牌，用于 /api/usage 额度查询 | （空） |
-| `NETLIFY_ACCOUNT_SLUG` | Netlify 团队 slug，不填默认取第一个团队 | （空） |
+```
+server/
+├── api/
+│   ├── _utils/
+│   │   ├── handler.js       # Netlify / Vercel 双平台兼容层
+│   │   ├── cloudflare.js    # Cloudflare 数据层：GraphQL 客户端/查询/聚合（核心）
+│   │   ├── response.js      # 统一响应 / CORS / Query 解析
+│   │   ├── csv.js           # CSV 导出
+│   │   └── config.js        # 环境变量配置
+│   ├── sites.js             # GET /api/sites   站点列表
+│   ├── stats.js             # GET /api/stats   统计聚合
+│   └── export.js            # GET /api/export  原始数据导出（带密码）
+├── public/
+│   ├── index.html           # 前端单页（Chart.js）
+│   ├── data/report.json     # AI 分析报告（外部程序生成，schema v3.0）
+│   └── favicon.png
+├── test-server.js           # 本地 Mock 服务器（npm run dev）
+├── vercel.json / netlify.toml
+└── package.json             # 零运行时依赖，Node >= 18
+```
 
 ## 🔐 安全建议
 
-1. **设置导出密码** - 建议配置 `EXPORT_KEY` 环境变量以保护导出接口，未设置时接口无密码保护
-2. **HTTPS** - 确保部署平台启用 HTTPS，防止密码明文传输
-3. **密钥管理** - 所有敏感信息都通过环境变量/Secrets 管理，不要硬编码
-4. **定期轮换** - 定期更换 51.la 密钥、导出密码和平台额度 Token
-5. **访问控制** - `/api/export` 和带 key 的 `/api/analysis` 接口应妥善保管密码
-6. **额度 Token 最小授权** - `VERCEL_TOKEN` / `NETLIFY_TOKEN` 仅用于服务端查询用量，仅保存在部署平台服务端，请勿在前端代码中引用
-
-## 🤝 与外部 AI 系统集成
-
-本系统提供两种方式供外部 AI 系统使用：
-
-### 方式一：使用分析数据（推荐）
-
-调用 `/api/analysis` 接口，获取已结构化的分析数据，直接用于 AI 分析。
-
-```bash
-# 获取最近 30 天的分析数据
-curl "https://analytics.bimg.cc/api/analysis?key=your-password&days=30"
-```
-
-优点：
-- 数据已结构化，AI 可直接使用
-- 包含质量评级、趋势判断、关键发现等预处理结果
-- 数据量适中，减少 AI token 消耗
-
-### 方式二：使用原始数据
-
-调用 `/api/export` 接口，获取 51.la 原始数据。
-
-```bash
-# 获取最近 30 天的原始数据（JSON）
-curl "https://analytics.bimg.cc/api/export?key=your-password&days=30&format=json"
-
-# 获取指定站点的 CSV 数据
-curl "https://analytics.bimg.cc/api/export?key=your-password&site=example.com&format=csv"
-```
-
-优点：
-- 数据最完整，包含所有 51.la 字段
-- 适合需要深度自定义分析的场景
+1. **Token 最小授权** — 仅授予 Analytics 读取；配合 `CF_ZONES` 白名单可不需要 Zone Read 权限
+2. **设置导出密码** — 生产环境务必配置 `EXPORT_KEY` 保护 `/api/export`
+3. **Token 仅存服务端** — 全部 Cloudflare 调用发生在 Serverless 函数内，前端无法接触 Token
+4. **定期轮换** Token 与导出密码
 
 ## 📜 License
 

@@ -1,0 +1,8 @@
+# 本地开发环境变量（复制为 .dev.vars，勿提交到仓库）
+# CLOUDFLARE_API_TOKEN：Cloudflare API Token
+#   dev 分支所需权限：Account → D1 Read/Write；Account/Zone → Analytics Read；Account → Workers Scripts Edit
+# CLOUDFLARE_ACCOUNT_ID：Cloudflare 账户 ID（用于额度查询与站点解析）
+# EXPORT_KEY：导出接口/管理操作访问密钥（未设置则不启用密码保护与管理员功能）
+CLOUDFLARE_API_TOKEN=
+CLOUDFLARE_ACCOUNT_ID=
+EXPORT_KEY=

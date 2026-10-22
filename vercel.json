@@ -9,9 +9,7 @@
   "routes": [
     { "src": "/api/sites", "dest": "/api/sites.js" },
     { "src": "/api/stats", "dest": "/api/stats.js" },
-    { "src": "/api/analysis", "dest": "/api/analysis.js" },
     { "src": "/api/export", "dest": "/api/export.js" },
-    { "src": "/api/usage", "dest": "/api/usage.js" },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
