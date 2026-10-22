@@ -1,9 +1,9 @@
-# Cloudflare 网站流量分析 · AI 报告系统
+# 网站流量分析 · AI 报告系统
 
-> **本文件为 `dev` 分支**（Cloudflare Workers + D1 版）。
-> `main` 分支（Netlify/Vercel 无数据库版）的说明见各分支自身 README。
+> **本文件为 Cloudflare Workers + D1 版说明**。
+> 此前 Netlify/Vercel 无数据库版本（含 MongoDB 采集的 V1.0.0）见文末「原 main 分支文档」。
 
-## 🧭 dev 分支概览（Workers + D1）
+## 🧭 概览（Workers + D1）
 
 - **部署平台**：Cloudflare Workers + D1（不再需要 Netlify/Vercel，不依赖 MongoDB）
 - **数据存储**：D1 保存 全局设置 / 站点管理 / AI 报告 / **每日数据快照**（Cron 每日 00:05 UTC 回填近 30 天）
@@ -23,13 +23,13 @@ npm run dev              # http://localhost:8787（wrangler dev --local，D1 本
 
 # 部署（敏感变量以 Worker Secret 方式设置，不写入 wrangler.jsonc；账户 ID 经环境变量传入）
 export CLOUDFLARE_ACCOUNT_ID=你的账户ID
-wrangler d1 create website-analytics-dev-db   # 首次建库（需要 D1 Edit 权限；或将输出 database_id 填入 wrangler.jsonc）
-wrangler d1 execute website-analytics-dev-db --remote --file=src/schema.sql
+wrangler d1 create analytics   # 首次建库（需要 D1 Edit 权限；或将输出 database_id 填入 wrangler.jsonc）
+wrangler d1 execute analytics --remote --file=src/schema.sql
 npx wrangler deploy
 echo "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN
 echo "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
 echo "$EXPORT_KEY" | npx wrangler secret put EXPORT_KEY
-# 推送 dev 分支即可由 GitHub Actions 自动部署（含 secret 写入）
+# 推送分支即可由 GitHub Actions 自动部署（dev 分支触发 deploy-dev.yml，含 secret 写入）
 ```
 
 > 目前环境 Node 较旧（16）时请使用 Node 18+ 运行 wrangler（本项目附带 .tools/ 便携版说明见下）。

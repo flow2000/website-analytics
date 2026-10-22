@@ -281,6 +281,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`\n  Cloudflare 网站流量分析 · 本地测试服务器（Mock 数据）`);
+  console.log(`\n  网站流量分析 · 本地测试服务器（Mock 数据）`);
   console.log(`  ➜  http://localhost:${PORT}\n`);
 });

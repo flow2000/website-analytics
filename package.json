@@ -1,7 +1,7 @@
 {
   "name": "website-analytics-server",
   "version": "3.1.0-dev",
-  "description": "Cloudflare 网站流量分析系统（dev 分支：Cloudflare Workers + D1） - GraphQL Analytics API 快照化 + multi-site 仪表盘 + AI 报告",
+  "description": "网站流量分析系统（Cloudflare Workers + D1） - GraphQL Analytics API 快照化 + multi-site 仪表盘 + AI 报告",
   "private": true,
   "type": "module",
   "engines": {

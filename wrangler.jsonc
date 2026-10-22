@@ -1,4 +1,4 @@
-// Cloudflare Workers + D1 配置（dev 分支）
+// Cloudflare Workers + D1 配置（analytics）
 // 敏感变量（CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / EXPORT_KEY）以 Worker Secret 方式设置，勿写入本文件：
 //   echo "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN
 //   echo "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
@@ -7,12 +7,12 @@
 //   npx wrangler deploy --account-id "$CLOUDFLARE_ACCOUNT_ID"
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "website-analytics-dev",
+  "name": "analytics",
   "main": "src/index.js",
   "compatibility_date": "2025-10-01",
   "workers_dev": true,
   "vars": {
-    "APP_NAME": "Cloudflare 网站流量分析 (dev)"
+    "APP_NAME": "网站流量分析"
   },
   "triggers": {
     "crons": ["5 0 * * *"]
@@ -20,7 +20,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "website-analytics-dev-db",
+      "database_name": "analytics",
       "database_id": "fdca190d-dbc8-4a1a-967a-e9480b1b34f6"
     }
   ],

@@ -1,5 +1,5 @@
--- D1 数据库结构（dev 分支）
--- 执行：wrangler d1 execute website-analytics-dev-db --remote --file=src/schema.sql
+-- D1 数据库结构
+-- 执行：wrangler d1 execute analytics --remote --file=src/schema.sql
 
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,            -- access_mode / access_password_hash / access_password_salt /

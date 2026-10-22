@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker 入口（dev 分支）
+ * Cloudflare Worker 入口
  * 路由 + 静态页面 + 数据接口访问控制 + Cron（每日快照）
  */
 

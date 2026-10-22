@@ -21,7 +21,7 @@ import {
 export async function handleConfig(request, env) {
   if (methodIs(request, 'GET')) {
     const mode = await getAccessMode(env);
-    return jsonReply({ mode, needsAuth: mode !== ACCESS_NONE, appName: env.APP_NAME || 'Cloudflare Analytics' }, { cache: 'no-cache' });
+    return jsonReply({ mode, needsAuth: mode !== ACCESS_NONE, appName: env.APP_NAME || 'Analytics' }, { cache: 'no-cache' });
   }
 
   if (!methodIs(request, 'POST')) return errorReply('Method not allowed', 405);
