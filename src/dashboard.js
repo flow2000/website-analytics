@@ -296,8 +296,8 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
   <div class="controls">
     <select class="site-select" id="siteSelect" title="选择站点"></select>
     <div class="range-tabs" id="rangeTabs">
-      <button data-range="today">今天</button>
-      <button data-range="7d" class="active">近7天</button>
+      <button data-range="today" class="active">今天</button>
+      <button data-range="7d">近7天</button>
       <button data-range="30d">近30天</button>
     </div>
     <div class="updated-at" id="updatedAt"></div>
@@ -601,7 +601,7 @@ const WAF_ZH = {
 };
 
 /* ==================== 全局状态 ==================== */
-const STATE = { sites: [], site: "all", range: "7d", stats: null, report: null, trendMetrics: new Set(["requests", "pageViews"]), charts: {}, needsAuth: false, authMode: "password", rankMetric: "requests" };
+const STATE = { sites: [], site: "all", range: "today", stats: null, report: null, trendMetrics: new Set(["requests", "pageViews"]), charts: {}, needsAuth: false, authMode: "password", rankMetric: "requests" };
 
 function escapeHtml(s) {
   const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -878,15 +878,23 @@ async function loadReport() {
 /* ==================== 渲染：KPI ==================== */
 function renderKpis() {
   const t = STATE.stats.totals || {};
+  const prev = STATE.stats.prevTotals || null;
+  const prevLabel = STATE.stats.prevLabel || "较前";
+  const cmp = (cur, pv) => {
+    if (!prev || !pv) return "";
+    const d = (cur - pv) / pv * 100;
+    const up = d >= 0;
+    return " <span style='color:" + (up ? "var(--success)" : "var(--danger)") + ";font-weight:600'>" + prevLabel + " " + (up ? "▲ +" : "▼ ") + d.toFixed(1) + "%</span>";
+  };
   const cards = [
-    { label: "总请求 Requests", icon: "🚀", value: fmtCompact(t.requests), sub: fmtInt(t.requests) + " 次", color: "#f6821f" },
-    { label: "页面浏览 PageViews", icon: "📄", value: fmtCompact(t.pageViews), sub: fmtInt(t.pageViews) + " 次", color: "#3b82f6" },
-    { label: "独立访客 Uniques", icon: "👤", value: fmtCompact(t.uniques), sub: "按日去重求和", color: "#8b5cf6" },
-    { label: "总流量 Bandwidth", icon: "📡", value: fmtBytes(t.bytes), sub: "边缘传输字节", color: "#06b6d4" },
-    { label: "会话数 Visits", icon: "🔗", value: fmtCompact(t.visits), sub: "外部来源进入会话", color: "#10b981" },
+    { label: "总请求 Requests", icon: "🚀", value: fmtCompact(t.requests), sub: fmtInt(t.requests) + " 次" + cmp(t.requests, prev.requests), color: "#f6821f" },
+    { label: "页面浏览 PageViews", icon: "📄", value: fmtCompact(t.pageViews), sub: fmtInt(t.pageViews) + " 次" + cmp(t.pageViews, prev.pageViews), color: "#3b82f6" },
+    { label: "独立访客 Uniques", icon: "👤", value: fmtCompact(t.uniques), sub: "按日去重求和" + cmp(t.uniques, prev.uniques), color: "#8b5cf6" },
+    { label: "总流量 Bandwidth", icon: "📡", value: fmtBytes(t.bytes), sub: "边缘传输字节" + cmp(t.bytes, prev.bytes), color: "#06b6d4" },
+    { label: "会话数 Visits", icon: "🔗", value: fmtCompact(t.visits), sub: "外部来源进入会话" + cmp(t.visits, prev.visits), color: "#10b981" },
     { label: "缓存命中率", icon: "⚡", value: fmtPct(t.cacheHitRate), sub: "命中 " + fmtCompact(t.cachedRequests) + " / " + fmtCompact(t.requests), color: "#84cc16" },
-    { label: "威胁拦截 Threats", icon: "🛡️", value: fmtCompact(t.threats), sub: "HTTPS " + fmtPct(t.encryptedRate), color: "#ef4444" },
-    { label: "WAF 拦截", icon: "🚧", value: fmtCompact(t.wafEvents), sub: "防火墙事件", color: "#f59e0b" },
+    { label: "威胁拦截 Threats", icon: "🛡️", value: fmtCompact(t.threats), sub: "HTTPS " + fmtPct(t.encryptedRate) + cmp(t.threats, prev.threats), color: "#ef4444" },
+    { label: "WAF 拦截", icon: "🚧", value: fmtCompact(t.wafEvents), sub: "防火墙事件" + cmp(t.wafEvents, prev.wafEvents), color: "#f59e0b" },
   ];
   $("kpiGrid").innerHTML = cards.map(c =>
     "<div class=kpi-card style='--kc:" + c.color + "'><div class=kpi-label>" + c.icon + " " + c.label + "</div><div class=kpi-value style='color:" + c.color + "'>" + c.value + "</div><div class=kpi-sub>" + c.sub + "</div></div>").join("");
@@ -938,16 +946,22 @@ function renderTrendChart() {
   const labels = trend.map(r => isHour ? fmtHour(r.datetime) : r.date.slice(5));
   const th = chartTheme();
   const datasets = TREND_METRICS.filter(m => STATE.trendMetrics.has(m.key)).map(m => ({
-    label: m.label, data: trend.map(r => r[m.key] || 0),
+    label: m.label, metric: m.key, data: trend.map(r => r[m.key] || 0),
     borderColor: m.color, backgroundColor: m.color + "22", fill: m.key === "requests",
-    tension: 0.35, pointRadius: isHour ? 0 : 2.5, pointHoverRadius: 5, borderWidth: 2.2, yAxisID: "y",
+    tension: 0.35, pointRadius: isHour ? 0 : 2.5, pointHoverRadius: 5, borderWidth: 2.2,
+    yAxisID: m.key === "bytes" ? "y1" : "y",
   }));
+  const trendOpts = baseOptions({ scales: {
+    x: { ticks: { color: th.text, maxTicksLimit: isHour ? 12 : 15, font: { size: 11.5 } }, grid: { color: th.grid } },
+    y: { position: "left", beginAtZero: true, ticks: { color: th.text, font: { size: 11.5 }, callback: v => fmtCompact(v) }, grid: { color: th.grid } },
+    // 流量(Bytes)单独使用右侧轴，避免数量级差异压平其他指标
+    y1: { position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: th.text, font: { size: 11.5 }, callback: v => fmtBytes(v) } },
+  } });
+  trendOpts.plugins.tooltip.callbacks = {
+    label: function (ctx) { return " " + ctx.dataset.label + ": " + (ctx.dataset.metric === "bytes" ? fmtBytes(ctx.parsed.y) : fmtCompact(ctx.parsed.y)); },
+  };
   STATE.charts.trend = new Chart($("trendChart"), {
-    type: "line", data: { labels, datasets },
-    options: baseOptions({ scales: {
-      x: { ticks: { color: th.text, maxTicksLimit: isHour ? 12 : 15, font: { size: 11.5 } }, grid: { color: th.grid } },
-      y: { position: "left", beginAtZero: true, ticks: { color: th.text, font: { size: 11.5 }, callback: v => fmtCompact(v) }, grid: { color: th.grid } },
-    } }),
+    type: "line", data: { labels, datasets }, options: trendOpts,
   });
 }
 function renderDonut(key, canvasId, items, colors, zhFn) {

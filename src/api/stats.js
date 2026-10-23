@@ -84,6 +84,7 @@ export async function handleStats(request, env) {
     const zoneNameById = new Map(zones.map(z => [z.zoneId, z.name]));
     const nowIso = new Date().toISOString();
     const generatedAt = nowIso;
+    const domains = targets.map(s => s.domain);
 
     let stats;
     let hourly = [];
@@ -115,7 +116,6 @@ export async function handleStats(request, env) {
       const pastDates = [];
       for (let i = 0; i < range.days - 1; i++) pastDates.push(addDays(range.start, i));
 
-      const domains = targets.map(s => s.domain);
       const rows = await getDailyRows(env, domains, range.start, yesterday);
 
       // 计算每个站点的缺失日期
@@ -199,6 +199,30 @@ export async function handleStats(request, env) {
       stats.totals.wafEvents = grandWaf;
     }
 
+    // 前一日 / 上一周期对比（供 KPI 卡片展示涨跌）
+    let prevTotals = null;
+    let prevLabel = null;
+    try {
+      if (range.key === 'today') {
+        const y = addDays(range.start, -1);
+        const prevZoneResults = await fetchDailyGroups(env, zones, y, y);
+        prevTotals = buildDailyStats(prevZoneResults, zoneNameById).totals;
+        prevLabel = '较昨日';
+      } else {
+        const prevEnd = addDays(range.start, -1);
+        const prevStart = addDays(prevEnd, -(range.days - 1));
+        const prevRows = await getDailyRows(env, domains, prevStart, prevEnd);
+        const prevZoneResults = targets.map(s => ({
+          zoneTag: s.zone_id,
+          httpRequests1dGroups: prevRows.filter(r => r.domain === s.domain).map(groupFromRow),
+        }));
+        prevTotals = buildDailyStats(prevZoneResults, zoneNameById).totals;
+        prevLabel = '较上一周期';
+      }
+    } catch (e) {
+      console.error('对比周期统计失败（已降级）:', e.message);
+    }
+
     return jsonReply({
       range: range.key,
       rangeLabel: range.label,
@@ -209,6 +233,8 @@ export async function handleStats(request, env) {
       generatedAt,
       sites: zones.map(z => ({ name: z.name, zoneId: z.zoneId })),
       totals: stats.totals,
+      prevTotals,
+      prevLabel,
       trend: range.key === 'today' ? hourly : stats.trend,
       breakdowns: {
         ...stats.breakdowns,
