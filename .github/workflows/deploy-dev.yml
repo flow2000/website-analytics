@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -46,6 +50,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           EXPORT_KEY: ${{ secrets.EXPORT_KEY }}
         run: |
-          echo "$CLOUDFLARE_API_TOKEN" | npx wrangler secret put CLOUDFLARE_API_TOKEN
-          echo "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
-          echo "$EXPORT_KEY" | npx wrangler secret put EXPORT_KEY
+          jq -n --arg t "$CLOUDFLARE_API_TOKEN" --arg a "$CLOUDFLARE_ACCOUNT_ID" --arg e "$EXPORT_KEY" \
+            '{CLOUDFLARE_API_TOKEN:$t, CLOUDFLARE_ACCOUNT_ID:$a, EXPORT_KEY:$e}' > .cf-secrets.json
+          ok=0
+          for i in 1 2 3 4 5; do
+            if npx wrangler secret bulk .cf-secrets.json; then ok=1; break; fi
+            echo "::warning::secret bulk 失败（可能为 Worker 并发修改冲突），10s 后重试 ($i/5)"
+            sleep 10
+          done
+          rm -f .cf-secrets.json
+          [ "$ok" = "1" ] || { echo "::error::多次重试后 secret 设置仍失败"; exit 1; }
