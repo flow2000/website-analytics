@@ -296,8 +296,8 @@ input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px s
   <div class="controls">
     <select class="site-select" id="siteSelect" title="选择站点"></select>
     <div class="range-tabs" id="rangeTabs">
-      <button data-range="today" class="active">今天</button>
-      <button data-range="7d">近7天</button>
+      <button data-range="today">今天</button>
+      <button data-range="7d" class="active">近7天</button>
       <button data-range="30d">近30天</button>
     </div>
     <div class="updated-at" id="updatedAt"></div>
@@ -601,7 +601,7 @@ const WAF_ZH = {
 };
 
 /* ==================== 全局状态 ==================== */
-const STATE = { sites: [], site: "all", range: "today", stats: null, report: null, trendMetrics: new Set(["requests", "pageViews"]), charts: {}, needsAuth: false, authMode: "password", rankMetric: "requests" };
+const STATE = { sites: [], site: "all", range: "7d", stats: null, report: null, trendMetrics: new Set(["requests", "pageViews"]), charts: {}, needsAuth: false, authMode: "password", rankMetric: "requests" };
 
 function escapeHtml(s) {
   const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
